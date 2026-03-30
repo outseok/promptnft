@@ -1,0 +1,228 @@
+/* App.css - PromptNFT 스타일 */
+
+:root {
+  --primary: #6c5ce7;
+  --primary-dark: #5a4bd1;
+  --bg: #0f0f23;
+  --surface: #1a1a2e;
+  --surface-light: #252547;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --success: #00b894;
+  --error: #e74c3c;
+  --sale: #fdcb6e;
+  --border: #333366;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ── 헤더 ── */
+.header {
+  text-align: center;
+  padding: 40px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 2.2rem; color: var(--primary); }
+.subtitle { color: var(--text-muted); margin: 4px 0 16px; }
+.wallet-section { margin-top: 12px; }
+.wallet-info { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.wallet-address {
+  background: var(--surface-light);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+/* ── 버튼 ── */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-outline:hover:not(:disabled) { background: var(--primary); color: white; }
+
+/* ── 메시지 ── */
+.message {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.message.success { background: rgba(0,184,148,0.15); border: 1px solid var(--success); }
+.message.error { background: rgba(231,76,60,0.15); border: 1px solid var(--error); }
+.close-btn { background: none; border: none; color: var(--text); cursor: pointer; font-size: 1.2rem; }
+
+/* ── 탭 ── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 20px 0;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+}
+.tabs button {
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+.tabs button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.tabs button:hover { color: var(--text); }
+
+/* ── 섹션 ── */
+.section { padding: 24px 0; }
+.section h2 { margin-bottom: 16px; font-size: 1.5rem; }
+.empty { color: var(--text-muted); text-align: center; padding: 40px 0; }
+.refresh-btn { margin-bottom: 16px; }
+
+/* ── NFT 그리드 ── */
+.nft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.nft-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: transform 0.2s;
+}
+.nft-card:hover { transform: translateY(-2px); }
+.nft-card.owned { border-color: var(--primary); }
+.nft-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.token-id { font-family: monospace; color: var(--text-muted); }
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  background: var(--surface-light);
+}
+.badge.sale { background: var(--sale); color: #000; font-weight: 600; }
+.nft-card h3 { margin-bottom: 8px; }
+.description { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px; }
+.nft-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.owner { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; }
+.nft-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ── 폼 ── */
+.form { max-width: 600px; }
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.form-group textarea { resize: vertical; font-family: inherit; }
+.form-row { display: flex; gap: 16px; }
+.form-row .form-group { flex: 1; }
+
+/* ── 실행 결과 ── */
+.exec-result {
+  margin-top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--success);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.exec-result h3 { margin-bottom: 12px; color: var(--success); }
+.exec-result pre {
+  white-space: pre-wrap;
+  font-family: monospace;
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.exec-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ── 에러 ── */
+.error { color: var(--error); font-size: 0.9rem; margin-top: 8px; }
+
+/* ── 푸터 ── */
+.footer {
+  text-align: center;
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.team { font-size: 0.8rem; margin-top: 4px; }

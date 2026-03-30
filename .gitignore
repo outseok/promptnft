@@ -4,3 +4,13 @@ artifacts/
 cache/
 typechain-types/
 coverage/
+
+# Backend
+backend/data.db
+backend/logs/
+backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
