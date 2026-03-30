@@ -1,0 +1,124 @@
+/* SmartSwitch DApp 스타일 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #1a73e8;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.status {
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.connected {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.section h2 {
+    margin-bottom: 15px;
+    color: #333;
+    border-bottom: 2px solid #1a73e8;
+    padding-bottom: 8px;
+}
+
+label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    margin-top: 10px;
+}
+
+select, input, button {
+    padding: 10px 15px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+select, input { width: 100%; }
+
+button {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    font-size: 16px;
+    transition: background 0.2s;
+}
+
+button:hover { background: #155ab6; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+
+.result {
+    background: #e8f0fe;
+    border-left: 4px solid #1a73e8;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 4px;
+    word-break: break-all;
+}
+
+.error {
+    background: #fce8e6;
+    border-left: 4px solid #d93025;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+th {
+    background: #1a73e8;
+    color: #fff;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #eee;
+}
