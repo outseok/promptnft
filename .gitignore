@@ -2,3 +2,14 @@ node_modules/
 promptnft.db
 node_modules.zip
 *.hwp
+
+# 기존 프로젝트 파일 (PromptNFT와 무관)
+SmartSwitch.sol
+app.js
+deploy.js
+index.html
+style.css
+parse_hwp.py
+verify_companies.py
+verify_cs_it.py
+*.txt
