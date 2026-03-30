@@ -1,0 +1,23 @@
+{
+  "name": "promptnft-contract",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PromptNFT ERC-721 contract with mint, market buy, and 10% royalty",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:hoodi": "hardhat run scripts/deploy.js --network hoodi",
+    "check": "hardhat compile && hardhat test",
+    "e2e:hoodi": "hardhat run scripts/e2eHoodi.js --network hoodi",
+    "viewer": "node scripts/serveViewer.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.18"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6"
+  }
+}

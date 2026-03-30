@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PromptNFT Manual Checker</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; max-width: 900px; }
+      h1 { margin-bottom: 8px; }
+      .hint { color: #555; margin-top: 0; }
+      .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+      input { padding: 8px; min-width: 220px; }
+      button { padding: 8px 12px; cursor: pointer; }
+      #log { white-space: pre-wrap; background: #111; color: #0f0; border-radius: 8px; padding: 12px; min-height: 170px; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+  </head>
+  <body>
+    <h1>PromptNFT 수동 확인 페이지</h1>
+    <p class="hint">지갑 연결 후 mint / list / buy / ownerOf / hasAccess를 버튼으로 확인하세요.</p>
+
+    <div class="card">
+      <h3>1) 연결</h3>
+      <div class="row">
+        <input id="contractAddress" placeholder="컨트랙트 주소" value="0x4187Cf6910659B75D9e90072304A5721A3Ef0E5b" />
+        <input id="targetChainHex" placeholder="체인ID(hex) 예: 0xaa36a7" value="0xaa36a7" />
+      </div>
+      <div class="row">
+        <button id="connectBtn">지갑 연결</button>
+        <button id="refreshBtn">현재 계정/네트워크 갱신</button>
+      </div>
+      <div id="status"></div>
+    </div>
+
+    <div class="card">
+      <h3>2) 민팅</h3>
+      <div class="row">
+        <input id="mintTo" placeholder="to 주소(비우면 내 주소)" />
+        <input id="mintUri" placeholder="tokenURI" value="ipfs://promptnft-manual" />
+      </div>
+      <button id="mintBtn">mint</button>
+    </div>
+
+    <div class="card">
+      <h3>3) 판매 등록</h3>
+      <div class="row">
+        <input id="listTokenId" type="number" placeholder="tokenId" value="0" />
+        <input id="listPriceEth" placeholder="price ETH" value="0.01" />
+      </div>
+      <button id="listBtn">listForSale</button>
+    </div>
+
+    <div class="card">
+      <h3>4) 구매</h3>
+      <div class="row">
+        <input id="buyTokenId" type="number" placeholder="tokenId" value="0" />
+        <input id="buyPriceEth" placeholder="price ETH" value="0.01" />
+      </div>
+      <button id="buyBtn">buy</button>
+    </div>
+
+    <div class="card">
+      <h3>5) 조회</h3>
+      <div class="row">
+        <input id="ownerTokenId" type="number" placeholder="ownerOf tokenId" value="0" />
+        <button id="ownerBtn">ownerOf 조회</button>
+      </div>
+      <div class="row">
+        <input id="accessAddress" placeholder="hasAccess 주소" />
+        <button id="accessBtn">hasAccess 조회</button>
+      </div>
+      <button id="nextTokenBtn">nextTokenId 조회</button>
+    </div>
+
+    <div class="card">
+      <h3>로그</h3>
+      <div id="log"></div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
