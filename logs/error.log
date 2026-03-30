@@ -1,0 +1,1 @@
+[2026-03-30 19:16:29] ERROR: 소유권 확인 실패 — tokenId=1 err=no matching fragment (operation="fragment", info={ "args": [ "0x4187Cf6910659B75D9e90072304A5721A3Ef0E5b", 1 ], "key": "hasAccess" }, code=UNSUPPORTED_OPERATION, version=6.16.0)
