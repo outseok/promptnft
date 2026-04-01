@@ -7,7 +7,7 @@ const API_BASE = "/api";
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 15000,
+  timeout: 0,
 });
 
 // 지갑 주소 헤더 자동 추가

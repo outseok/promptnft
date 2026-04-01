@@ -17,7 +17,6 @@ import {
   onChainBuy,
   onChainListForSale,
   onChainCancelListing,
-  checkOwnership,
   getNextTokenId,
   deployContract,
   getContractAddress,
@@ -176,23 +175,10 @@ function App() {
     setExecResult(null);
 
     try {
-      // 1. 온체인 소유권 확인
-      const isOwner = await checkOwnership(
-        wallet.provider,
-        Number(execTokenId),
-        wallet.account
-      );
-
-      if (!isOwner) {
-        setMessage("실행 실패: 이 NFT를 소유하고 있지 않습니다. 먼저 구매하세요!");
-        setLoading(false);
-        return;
-      }
-
-      // 2. 서명 생성
+      // 1. 서명 생성 (소유권은 백엔드에서 온체인 검증)
       const { nonce, signature } = await wallet.signMessage();
 
-      // 3. 실행 요청
+      // 2. 실행 요청
       const res = await executePrompt(
         {
           tokenId: Number(execTokenId),
