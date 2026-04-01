@@ -33,9 +33,10 @@ router.post("/", async (req, res, next) => {
     }
 
     // ── STEP 1: NFT 소유권 확인 (항상 온체인 검증) ──
+    const contractAddress = req.headers["x-contract-address"] || process.env.CONTRACT_ADDRESS;
     let hasAccess = false;
     try {
-      hasAccess = await verifyOwnership(wallet, tokenId);
+      hasAccess = await verifyOwnership(wallet, tokenId, contractAddress);
     } catch (err) {
       logger.error(`소유권 확인 실패: ${err.message}`);
       // 블록체인 연결 실패 시 DB 소유권으로 폴백

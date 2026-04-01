@@ -198,6 +198,7 @@ function App() {
           "x-wallet-address": wallet.account,
           "x-signature": signature,
           "x-nonce": nonce,
+          "x-contract-address": getContractAddress(),
         }
       );
 

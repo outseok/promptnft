@@ -7,27 +7,32 @@ const logger = require("./logger");
 const { getCachedOwnership, setCachedOwnership, invalidateToken } = require("./cache");
 
 let _provider = null;
-let _contract = null;
+let _contracts = {};
 
-function getContract() {
-  if (!_contract) {
-    const ABI = require("../abi/PromptNFT.json");
+function getProvider() {
+  if (!_provider) {
     _provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_SEPOLIA_URL);
-    _contract = new ethers.Contract(
-      process.env.CONTRACT_ADDRESS,
-      ABI,
-      _provider
-    );
   }
-  return _contract;
+  return _provider;
 }
 
-async function verifyOwnership(wallet, tokenId) {
+function getContract(contractAddress) {
+  const addr = contractAddress || process.env.CONTRACT_ADDRESS;
+  if (!addr) throw new Error("CONTRACT_ADDRESS 미설정");
+  
+  if (!_contracts[addr]) {
+    const ABI = require("../abi/PromptNFT.json");
+    _contracts[addr] = new ethers.Contract(addr, ABI, getProvider());
+  }
+  return _contracts[addr];
+}
+
+async function verifyOwnership(wallet, tokenId, contractAddress) {
   const cached = getCachedOwnership(wallet, tokenId);
   if (cached !== null) return cached;
 
   try {
-    const contract = getContract();
+    const contract = getContract(contractAddress);
     const owner = await contract.ownerOf(tokenId);
     const hasAccess = owner.toLowerCase() === wallet.toLowerCase();
 
