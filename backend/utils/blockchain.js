@@ -41,6 +41,14 @@ async function verifyOwnership(wallet, tokenId, contractAddress) {
     return hasAccess;
   } catch (err) {
     logger.error(`소유권 확인 실패 — tokenId=${tokenId} err=${err.message}`);
+    // RPC/서버 에러면 throw → execute.js에서 DB 폴백 가능
+    // "token doesn't exist" 같은 컨트랙트 에러만 false 리턴
+    if (err.code === "SERVER_ERROR" || err.code === "NETWORK_ERROR" || err.code === "TIMEOUT" || err.message.includes("522") || err.message.includes("failed to detect network")) {
+      // 실패한 provider/contract 캐시 리셋
+      _provider = null;
+      _contracts = {};
+      throw err;
+    }
     return false;
   }
 }
