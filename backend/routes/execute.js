@@ -1,5 +1,5 @@
 // routes/execute.js
-// 역할: 핵심 실행 API
+// 역할: 핵심 실행 API — OpenAI GPT 연동
 // 담당: 최유리
 
 const router = require("express").Router();
@@ -7,8 +7,18 @@ const { verifyOwnership } = require("../utils/blockchain");
 const { decrypt } = require("../utils/crypto");
 const db = require("../utils/db");
 const logger = require("../utils/logger");
+const OpenAI = require("openai");
 
 const USAGE_LIMIT = 50;
+
+// OpenAI 클라이언트 (API 키가 없으면 데모 모드)
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  logger.info("OpenAI API 연동 활성화");
+} else {
+  logger.warn("OPENAI_API_KEY 미설정 — AI 실행은 데모 응답 반환");
+}
 
 router.post("/", async (req, res, next) => {
   try {
@@ -25,7 +35,7 @@ router.post("/", async (req, res, next) => {
     // ── STEP 1: NFT 소유권 확인 ──
     let hasAccess = false;
     if (process.env.DEMO_MODE === "true") {
-      hasAccess = true; // 데모 모드: 소유권 검증 스킵
+      hasAccess = true;
     } else {
       hasAccess = await verifyOwnership(wallet, tokenId);
     }
@@ -60,12 +70,32 @@ router.post("/", async (req, res, next) => {
 
     const systemPrompt = decrypt(row.encrypted_content);
 
-    // ── STEP 4: 실행 (하드코딩 — AI 제외 버전) ──
-    const result =
-      `[데모 실행 결과]\n\n` +
-      `입력: "${userMessage}"\n\n` +
-      `NFT #${tokenId} 소유자만 실행 가능한 프롬프트입니다.\n` +
-      `실제 서비스에서는 AI가 응답합니다.`;
+    // ── STEP 4: AI 실행 ──
+    let result;
+
+    if (openai) {
+      // 실제 OpenAI GPT 호출
+      const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        max_completion_tokens: 1024,
+        temperature: 0.7,
+      });
+
+      result = completion.choices[0].message.content;
+      logger.info(`OpenAI 응답 완료 — tokenId=${tokenId}, tokens=${completion.usage?.total_tokens}`);
+    } else {
+      // API 키 없으면 데모 응답
+      result =
+        `[데모 실행 결과]\n\n` +
+        `입력: "${userMessage}"\n\n` +
+        `시스템 프롬프트가 복호화되어 AI에 전달됩니다.\n` +
+        `실제 연동을 위해 .env에 OPENAI_API_KEY를 설정하세요.`;
+    }
 
     // ── STEP 5: 사용량 업데이트 ──
     db.prepare(`
@@ -82,6 +112,7 @@ router.post("/", async (req, res, next) => {
       result,
       usageCount: newCount,
       usageLeft: USAGE_LIMIT - newCount,
+      aiEnabled: !!openai,
       executionInfo: req.executionInfo || null,
     });
   } catch (err) {
