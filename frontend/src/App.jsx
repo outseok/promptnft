@@ -12,6 +12,14 @@ import {
   executePrompt,
   updateSaleStatus,
 } from "./api";
+import {
+  onChainMint,
+  onChainBuy,
+  onChainListForSale,
+  onChainCancelListing,
+  checkOwnership,
+  getNextTokenId,
+} from "./contract";
 import "./App.css";
 
 function App() {
@@ -24,7 +32,6 @@ function App() {
 
   // ── 민팅 폼 ──
   const [mintForm, setMintForm] = useState({
-    token_id: "",
     title: "",
     description: "",
     prompt: "",
@@ -64,7 +71,7 @@ function App() {
     }
   }
 
-  // ── 민팅 ──
+  // ── 민팅 (온체인 + 백엔드) ──
   async function handleMint(e) {
     e.preventDefault();
     if (!wallet.isConnected) {
@@ -75,16 +82,34 @@ function App() {
     setMessage("");
 
     try {
-      // 1. 프롬프트 암호화 저장
+      // 1. 온체인 민팅 (MetaMask 트랜잭션)
+      setMessage("MetaMask에서 민팅 트랜잭션을 승인해주세요...");
+      const tokenURI = JSON.stringify({
+        title: mintForm.title,
+        description: mintForm.description,
+        category: mintForm.category,
+      });
+
+      const { tokenId, txHash } = await onChainMint(
+        wallet.signer,
+        wallet.account,
+        tokenURI
+      );
+
+      const finalTokenId = tokenId ?? (await getNextTokenId(wallet.provider) - 1);
+
+      setMessage(`온체인 민팅 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 저장 중...`);
+
+      // 2. 프롬프트 암호화 저장 (백엔드)
       await encryptPrompt({
-        tokenId: Number(mintForm.token_id),
+        tokenId: finalTokenId,
         promptContent: mintForm.prompt,
         walletAddress: wallet.account,
       });
 
-      // 2. NFT 데이터 저장
+      // 3. NFT 메타데이터 백엔드 저장
       await mintNFT({
-        token_id: Number(mintForm.token_id),
+        token_id: finalTokenId,
         title: mintForm.title,
         description: mintForm.description,
         prompt_encrypted: "[encrypted]",
@@ -93,18 +118,19 @@ function App() {
         category: mintForm.category,
       });
 
-      setMessage(`NFT #${mintForm.token_id} 민팅 성공!`);
-      setMintForm({ token_id: "", title: "", description: "", prompt: "", price: "0.01", category: "general" });
+      setMessage(`NFT #${finalTokenId} 민팅 성공! (tx: ${txHash.slice(0, 10)}...)`);
+      setMintForm({ title: "", description: "", prompt: "", price: "0.01", category: "general" });
       loadNFTs();
       loadMyNFTs();
     } catch (err) {
-      setMessage("민팅 실패: " + (err.response?.data?.error || err.message));
+      const msg = err.reason || err.response?.data?.error || err.message;
+      setMessage("민팅 실패: " + msg);
     } finally {
       setLoading(false);
     }
   }
 
-  // ── 구매 ──
+  // ── 구매 (온체인 ETH 전송 + 백엔드 동기화) ──
   async function handleBuy(tokenId, price) {
     if (!wallet.isConnected) {
       setMessage("지갑을 먼저 연결하세요!");
@@ -114,22 +140,32 @@ function App() {
     setMessage("");
 
     try {
+      // 1. 온체인 구매 (MetaMask에서 ETH 전송 승인)
+      setMessage("MetaMask에서 구매 트랜잭션을 승인해주세요...");
+      const txHash = await onChainBuy(wallet.signer, tokenId, String(price));
+
+      setMessage(`온체인 구매 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 동기화 중...`);
+
+      // 2. 백엔드 DB 소유자 업데이트
       await buyNFT({
         token_id: tokenId,
         buyer_address: wallet.account,
         price: price,
+        tx_hash: txHash,
       });
-      setMessage(`NFT #${tokenId} 구매 성공!`);
+
+      setMessage(`NFT #${tokenId} 구매 성공! (tx: ${txHash.slice(0, 10)}...)`);
       loadNFTs();
       loadMyNFTs();
     } catch (err) {
-      setMessage("구매 실패: " + (err.response?.data?.error || err.message));
+      const msg = err.reason || err.response?.data?.error || err.message;
+      setMessage("구매 실패: " + msg);
     } finally {
       setLoading(false);
     }
   }
 
-  // ── 프롬프트 실행 ──
+  // ── 프롬프트 실행 (소유권 확인 후) ──
   async function handleExecute(e) {
     e.preventDefault();
     if (!wallet.isConnected) {
@@ -141,9 +177,23 @@ function App() {
     setExecResult(null);
 
     try {
-      // 서명 생성
+      // 1. 온체인 소유권 확인
+      const isOwner = await checkOwnership(
+        wallet.provider,
+        Number(execTokenId),
+        wallet.account
+      );
+
+      if (!isOwner) {
+        setMessage("실행 실패: 이 NFT를 소유하고 있지 않습니다. 먼저 구매하세요!");
+        setLoading(false);
+        return;
+      }
+
+      // 2. 서명 생성
       const { nonce, signature } = await wallet.signMessage();
 
+      // 3. 실행 요청
       const res = await executePrompt(
         {
           tokenId: Number(execTokenId),
@@ -159,24 +209,47 @@ function App() {
       setExecResult(res);
       setMessage("실행 성공!");
     } catch (err) {
-      setMessage("실행 실패: " + (err.response?.data?.error || err.message));
+      const msg = err.reason || err.response?.data?.error || err.message;
+      setMessage("실행 실패: " + msg);
     } finally {
       setLoading(false);
     }
   }
 
-  // ── 판매 상태 토글 ──
+  // ── 판매 상태 토글 (온체인) ──
   async function handleToggleSale(tokenId, currentSale, price) {
+    if (!wallet.isConnected) {
+      setMessage("지갑을 먼저 연결하세요!");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+
     try {
+      if (currentSale) {
+        // 판매 취소 (온체인)
+        setMessage("MetaMask에서 판매 취소 트랜잭션을 승인해주세요...");
+        await onChainCancelListing(wallet.signer, tokenId);
+      } else {
+        // 판매 등록 (온체인)
+        setMessage("MetaMask에서 판매 등록 트랜잭션을 승인해주세요...");
+        await onChainListForSale(wallet.signer, tokenId, String(price));
+      }
+
+      // 백엔드 DB 동기화
       await updateSaleStatus(tokenId, {
         is_for_sale: !currentSale,
         price: price,
       });
+
       setMessage(currentSale ? `NFT #${tokenId} 판매 중지` : `NFT #${tokenId} 판매 시작`);
       loadNFTs();
       loadMyNFTs();
     } catch (err) {
-      setMessage("판매 상태 변경 실패: " + (err.response?.data?.error || err.message));
+      const msg = err.reason || err.response?.data?.error || err.message;
+      setMessage("판매 상태 변경 실패: " + msg);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -324,16 +397,6 @@ function App() {
             <p className="empty">지갑을 연결해야 민팅할 수 있습니다.</p>
           ) : (
             <form onSubmit={handleMint} className="form">
-              <div className="form-group">
-                <label>Token ID</label>
-                <input
-                  type="number"
-                  value={mintForm.token_id}
-                  onChange={(e) => setMintForm({ ...mintForm, token_id: e.target.value })}
-                  placeholder="예: 0, 1, 2..."
-                  required
-                />
-              </div>
               <div className="form-group">
                 <label>제목</label>
                 <input

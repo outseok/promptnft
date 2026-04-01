@@ -32,12 +32,18 @@ router.post("/", async (req, res, next) => {
       return res.status(401).json({ error: "지갑 주소가 필요합니다" });
     }
 
-    // ── STEP 1: NFT 소유권 확인 ──
+    // ── STEP 1: NFT 소유권 확인 (항상 온체인 검증) ──
     let hasAccess = false;
-    if (process.env.DEMO_MODE === "true") {
-      hasAccess = true;
-    } else {
+    try {
       hasAccess = await verifyOwnership(wallet, tokenId);
+    } catch (err) {
+      logger.error(`소유권 확인 실패: ${err.message}`);
+      // 블록체인 연결 실패 시 DB 소유권으로 폴백
+      const nftRow = db.prepare("SELECT owner_address FROM nfts WHERE token_id = ?").get(String(tokenId));
+      if (nftRow && nftRow.owner_address === wallet.toLowerCase()) {
+        hasAccess = true;
+        logger.info(`DB 폴백 소유권 확인 — wallet=${wallet.slice(0,8)}... tokenId=${tokenId}`);
+      }
     }
 
     if (!hasAccess) {
