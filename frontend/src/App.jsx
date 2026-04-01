@@ -116,7 +116,13 @@ function App() {
         category: mintForm.category,
       });
 
-      setMessage(`NFT #${finalTokenId} 민팅 성공! (tx: ${txHash.slice(0, 10)}...)`);
+      // 4. 온체인 판매 등록 (민팅 후 자동으로 마켓에 올림)
+      if (Number(mintForm.price) > 0) {
+        setMessage(`NFT #${finalTokenId} 민팅 완료! 판매 등록 중...`);
+        await onChainListForSale(wallet.signer, finalTokenId, String(mintForm.price));
+      }
+
+      setMessage(`NFT #${finalTokenId} 민팅 + 판매 등록 성공! (tx: ${txHash.slice(0, 10)}...)`);
       setMintForm({ title: "", description: "", prompt: "", price: "0.01", category: "general" });
       loadNFTs();
       loadMyNFTs();
@@ -157,7 +163,11 @@ function App() {
       loadMyNFTs();
     } catch (err) {
       const msg = err.reason || err.response?.data?.error || err.message;
-      setMessage("구매 실패: " + msg);
+      if (msg === "Not listed") {
+        setMessage("구매 실패: 이 NFT는 온체인에 판매 등록되지 않았습니다. 소유자가 판매 상태를 다시 토글해야 합니다.");
+      } else {
+        setMessage("구매 실패: " + msg);
+      }
     } finally {
       setLoading(false);
     }
