@@ -3,11 +3,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "initialOwner",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "royaltyReceiver",
         "type": "address"
       }
@@ -428,11 +423,6 @@
   },
   {
     "inputs": [
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
       {
         "internalType": "string",
         "name": "tokenURI",

@@ -28,25 +28,24 @@ contract PromptNFT is ERC721URIStorage, ERC2981, Ownable {
     );
     event ListingCanceled(uint256 indexed tokenId);
 
-    constructor(address initialOwner, address royaltyReceiver)
+    constructor(address royaltyReceiver)
         ERC721("PromptNFT", "PRMPT")
         Ownable()
     {
         require(royaltyReceiver != address(0), "Invalid royalty receiver");
-        _transferOwnership(initialOwner);
+        _transferOwnership(msg.sender);
         _setDefaultRoyalty(royaltyReceiver, ROYALTY_BPS);
     }
 
-    function mint(address to, string calldata tokenURI) external onlyOwner returns (uint256) {
-        require(to != address(0), "Invalid recipient");
-
+    /// @notice 누구나 NFT 민팅 가능 (msg.sender에게 발행)
+    function mint(string calldata tokenURI) external returns (uint256) {
         uint256 tokenId = nextTokenId;
         nextTokenId += 1;
 
-        _safeMint(to, tokenId);
+        _safeMint(msg.sender, tokenId);
         _setTokenURI(tokenId, tokenURI);
 
-        emit Minted(tokenId, to, tokenURI);
+        emit Minted(tokenId, msg.sender, tokenURI);
         return tokenId;
     }
 

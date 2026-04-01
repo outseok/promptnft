@@ -19,6 +19,8 @@ import {
   onChainCancelListing,
   checkOwnership,
   getNextTokenId,
+  deployContract,
+  getContractAddress,
 } from "./contract";
 import "./App.css";
 
@@ -29,6 +31,7 @@ function App() {
   const [myNfts, setMyNfts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [contractAddr, setContractAddr] = useState(getContractAddress());
 
   // ── 민팅 폼 ──
   const [mintForm, setMintForm] = useState({
@@ -90,11 +93,7 @@ function App() {
         category: mintForm.category,
       });
 
-      const { tokenId, txHash } = await onChainMint(
-        wallet.signer,
-        wallet.account,
-        tokenURI
-      );
+      const { tokenId, txHash } = await onChainMint(wallet.signer, tokenURI);
 
       const finalTokenId = tokenId ?? (await getNextTokenId(wallet.provider) - 1);
 
@@ -253,6 +252,31 @@ function App() {
     }
   }
 
+  // ── 컨트랙트 배포 (MetaMask로 — 프라이빗 키 불필요) ──
+  async function handleDeploy() {
+    if (!wallet.isConnected) {
+      setMessage("지갑을 먼저 연결하세요!");
+      return;
+    }
+    if (wallet.chainId !== 11155111) {
+      setMessage("Sepolia 네트워크로 전환해주세요! (현재: " + wallet.chainId + ")");
+      return;
+    }
+    setLoading(true);
+    setMessage("MetaMask에서 컨트랙트 배포 트랜잭션을 승인해주세요... (가스비 필요)");
+
+    try {
+      const address = await deployContract(wallet.signer);
+      setContractAddr(address);
+      setMessage(`컨트랙트 배포 완료! 주소: ${address}`);
+    } catch (err) {
+      const msg = err.reason || err.message;
+      setMessage("배포 실패: " + msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="app">
       {/* ── 헤더 ── */}
@@ -299,6 +323,9 @@ function App() {
         </button>
         <button className={tab === "execute" ? "active" : ""} onClick={() => setTab("execute")}>
           실행
+        </button>
+        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
+          설정
         </button>
       </nav>
 
@@ -502,6 +529,30 @@ function App() {
                 </div>
               )}
             </>
+          )}
+        </section>
+      )}
+
+      {/* ── 설정 ── */}
+      {tab === "settings" && (
+        <section className="section">
+          <h2>컨트랙트 설정</h2>
+          <div className="settings-info">
+            <p><strong>현재 컨트랙트:</strong> <code>{contractAddr}</code></p>
+            <p><strong>네트워크:</strong> {wallet.chainId === 11155111 ? "Sepolia ✅" : wallet.chainId ? `Chain ${wallet.chainId} (Sepolia로 전환 필요)` : "미연결"}</p>
+          </div>
+          {wallet.isConnected && (
+            <div className="deploy-section">
+              <p>새 컨트랙트를 배포하면 민팅/구매/판매가 이 컨트랙트에서 이루어집니다.</p>
+              <p>MetaMask에서 트랜잭션을 승인하면 자동으로 배포됩니다. (Sepolia ETH 필요)</p>
+              <button
+                onClick={handleDeploy}
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? "배포 중..." : "새 컨트랙트 배포 (MetaMask)"}
+              </button>
+            </div>
           )}
         </section>
       )}

@@ -8,7 +8,7 @@ async function main() {
   console.log("Royalty receiver:", royaltyReceiver);
 
   const PromptNFT = await hre.ethers.getContractFactory("PromptNFT");
-  const contract = await PromptNFT.deploy(deployer.address, royaltyReceiver);
+  const contract = await PromptNFT.deploy(royaltyReceiver);
 
   await contract.waitForDeployment();
   const address = await contract.getAddress();

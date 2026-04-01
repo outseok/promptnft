@@ -5,24 +5,25 @@ describe("PromptNFT", function () {
   async function deployFixture() {
     const [owner, seller, buyer, royaltyReceiver] = await ethers.getSigners();
     const PromptNFT = await ethers.getContractFactory("PromptNFT");
-    const contract = await PromptNFT.deploy(owner.address, royaltyReceiver.address);
+    const contract = await PromptNFT.deploy(royaltyReceiver.address);
     await contract.waitForDeployment();
     return { contract, owner, seller, buyer, royaltyReceiver };
   }
 
-  it("오너만 mint 가능", async function () {
-    const { contract, owner, seller } = await deployFixture();
+  it("누구나 mint 가능", async function () {
+    const { contract, seller, buyer } = await deployFixture();
 
-    await expect(contract.connect(owner).mint(seller.address, "ipfs://token-1")).to.not.be
-      .reverted;
-    await expect(contract.connect(seller).mint(seller.address, "ipfs://token-2")).to.be
-      .revertedWith("Ownable: caller is not the owner");
+    await expect(contract.connect(seller).mint("ipfs://token-1")).to.not.be.reverted;
+    await expect(contract.connect(buyer).mint("ipfs://token-2")).to.not.be.reverted;
+
+    expect(await contract.ownerOf(0)).to.equal(seller.address);
+    expect(await contract.ownerOf(1)).to.equal(buyer.address);
   });
 
   it("판매 등록 후 buy 시 10% 로열티 + 소유권 이전", async function () {
-    const { contract, owner, seller, buyer, royaltyReceiver } = await deployFixture();
+    const { contract, seller, buyer, royaltyReceiver } = await deployFixture();
 
-    await contract.connect(owner).mint(seller.address, "ipfs://token-1");
+    await contract.connect(seller).mint("ipfs://token-1");
 
     const tokenId = 0;
     const price = ethers.parseEther("1.0");
@@ -49,11 +50,11 @@ describe("PromptNFT", function () {
   });
 
   it("hasAccess는 NFT 보유 시 true", async function () {
-    const { contract, owner, seller, buyer } = await deployFixture();
+    const { contract, seller, buyer } = await deployFixture();
 
     expect(await contract.hasAccess(seller.address)).to.equal(false);
 
-    await contract.connect(owner).mint(seller.address, "ipfs://token-1");
+    await contract.connect(seller).mint("ipfs://token-1");
     expect(await contract.hasAccess(seller.address)).to.equal(true);
 
     await contract.connect(seller).transferFrom(seller.address, buyer.address, 0);
