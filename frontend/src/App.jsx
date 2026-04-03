@@ -11,6 +11,9 @@ import {
   encryptPrompt,
   executePrompt,
   updateSaleStatus,
+  checkAdmin,
+  adminDeleteNFT,
+  adminForceDelist,
 } from "./api";
 import {
   onChainMint,
@@ -31,6 +34,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [contractAddr, setContractAddr] = useState(getContractAddress());
+  const [isAdminUser, setIsAdminUser] = useState(false);
 
   // ── 민팅 폼 ──
   const [mintForm, setMintForm] = useState({
@@ -52,7 +56,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (wallet.account) loadMyNFTs();
+    if (wallet.account) {
+      loadMyNFTs();
+      checkAdmin().then((r) => setIsAdminUser(r.isAdmin)).catch(() => setIsAdminUser(false));
+    } else {
+      setIsAdminUser(false);
+    }
   }, [wallet.account]);
 
   async function loadNFTs() {
@@ -274,6 +283,36 @@ function App() {
     }
   }
 
+  // ── 관리자: NFT 삭제 ──
+  async function handleAdminDelete(tokenId) {
+    if (!confirm(`NFT #${tokenId}을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    setLoading(true);
+    try {
+      await adminDeleteNFT(tokenId);
+      setMessage(`[관리자] NFT #${tokenId} 삭제 완료`);
+      loadNFTs();
+      loadMyNFTs();
+    } catch (err) {
+      setMessage("삭제 실패: " + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── 관리자: 판매 강제 중지 ──
+  async function handleAdminDelist(tokenId) {
+    setLoading(true);
+    try {
+      await adminForceDelist(tokenId);
+      setMessage(`[관리자] NFT #${tokenId} 판매 강제 중지`);
+      loadNFTs();
+    } catch (err) {
+      setMessage("판매 중지 실패: " + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="app">
       {/* ── 헤더 ── */}
@@ -286,6 +325,7 @@ function App() {
               <span className="wallet-address">
                 {wallet.account.slice(0, 6)}...{wallet.account.slice(-4)}
               </span>
+              {isAdminUser && <span className="badge admin">관리자</span>}
               <button onClick={wallet.disconnect} className="btn btn-outline">
                 연결 해제
               </button>
@@ -321,9 +361,11 @@ function App() {
         <button className={tab === "execute" ? "active" : ""} onClick={() => setTab("execute")}>
           실행
         </button>
-        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
-          설정
-        </button>
+        {isAdminUser && (
+          <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
+            설정
+          </button>
+        )}
       </nav>
 
       {/* ── 마켓플레이스 ── */}
@@ -361,6 +403,18 @@ function App() {
                     >
                       구매하기
                     </button>
+                  )}
+                  {isAdminUser && (
+                    <div className="admin-actions">
+                      {nft.is_for_sale && (
+                        <button onClick={() => handleAdminDelist(nft.token_id)} className="btn btn-outline btn-sm" disabled={loading}>
+                          판매 중지
+                        </button>
+                      )}
+                      <button onClick={() => handleAdminDelete(nft.token_id)} className="btn btn-danger btn-sm" disabled={loading}>
+                        삭제
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}

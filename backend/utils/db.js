@@ -248,6 +248,14 @@ const queries = {
       [tokenId]
     );
   },
+
+  deleteNFT(tokenId) {
+    runSql("DELETE FROM prompts WHERE token_id = ?", [String(tokenId)]);
+    runSql("DELETE FROM usage WHERE token_id = ?", [String(tokenId)]);
+    runSql("DELETE FROM execution_logs WHERE token_id = ?", [tokenId]);
+    runSql("DELETE FROM transactions WHERE token_id = ?", [tokenId]);
+    runSql("DELETE FROM nfts WHERE token_id = ?", [tokenId]);
+  },
 };
 
 // initDB를 반드시 서버 시작 전에 호출해야 함

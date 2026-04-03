@@ -57,4 +57,14 @@ export const executePrompt = (data, headers = {}) =>
 export const getExecutions = (tokenId) =>
   api.get(`/nfts/${tokenId}/executions`).then((r) => r.data);
 
+// ── 관리자 API ──
+export const checkAdmin = () =>
+  api.get("/admin/check").then((r) => r.data);
+
+export const adminDeleteNFT = (tokenId) =>
+  api.delete(`/admin/nfts/${tokenId}`).then((r) => r.data);
+
+export const adminForceDelist = (tokenId) =>
+  api.patch(`/admin/nfts/${tokenId}/force-delist`).then((r) => r.data);
+
 export default api;

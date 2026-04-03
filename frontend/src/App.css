@@ -216,6 +216,36 @@ body {
 /* ── 에러 ── */
 .error { color: var(--error); font-size: 0.9rem; margin-top: 8px; }
 
+/* ── 관리자 ── */
+.badge.admin {
+  background: #e53e3e;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-left: 8px;
+}
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+.btn-danger {
+  background: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-danger:hover { background: #c53030; }
+
 /* ── 설정 ── */
 .settings-info {
   background: var(--bg-card);

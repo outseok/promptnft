@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:5173",
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-wallet-address", "x-signature", "x-nonce", "x-message"],
+  allowedHeaders: ["Content-Type", "x-wallet-address", "x-signature", "x-nonce", "x-message", "x-contract-address"],
 }));
 app.use(express.json());
 app.use(generalLimiter);
@@ -41,6 +41,9 @@ app.use("/api", mintRouter);   // POST /api/mint, POST /api/buy, PATCH /api/nfts
 app.use("/api/nonce",   nonceLimiter,   require("./routes/nonce"));
 app.use("/api/encrypt",                 require("./routes/encrypt"));
 app.use("/api/execute", executeLimiter,  executionLimit, require("./routes/execute"));
+
+// ── 관리자 API ──
+app.use("/api/admin", require("./routes/admin"));
 
 // ── 실행 횟수 조회 API (장우혁) ──
 const { queries } = require("./utils/db");

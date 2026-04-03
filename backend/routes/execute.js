@@ -33,7 +33,10 @@ router.post("/", async (req, res, next) => {
     }
 
     // ── STEP 1: NFT 소유권 확인 (항상 온체인 검증) ──
-    const contractAddress = req.headers["x-contract-address"] || process.env.CONTRACT_ADDRESS;
+    let contractAddress = req.headers["x-contract-address"] || process.env.CONTRACT_ADDRESS;
+    if (contractAddress && !/^0x[0-9a-fA-F]{40}$/.test(contractAddress)) {
+      contractAddress = process.env.CONTRACT_ADDRESS;
+    }
     let hasAccess = false;
     try {
       hasAccess = await verifyOwnership(wallet, tokenId, contractAddress);
