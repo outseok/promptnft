@@ -173,7 +173,7 @@ function App() {
         tx_hash: txHash,
       });
 
-      setMessage(`NFT #${tokenId} 구매 성공! (tx: ${txHash.slice(0, 10)}...)`);
+      setMessage(`NFT #${tokenId} 구매 성공! Etherscan에서 확인: https://sepolia.etherscan.io/tx/${txHash} (Internal Transactions 탭에서 판매자에게 ETH 전송 확인 가능)`);
       loadNFTs();
       loadMyNFTs();
     } catch (err) {

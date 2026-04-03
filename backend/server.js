@@ -45,6 +45,9 @@ app.use("/api/execute", executeLimiter,  executionLimit, require("./routes/execu
 // ── 관리자 API ──
 app.use("/api/admin", require("./routes/admin"));
 
+// ── 검증 API (암호화 + 트랜잭션) ──
+app.use("/api/verify", require("./routes/verify"));
+
 // ── 실행 횟수 조회 API (장우혁) ──
 const { queries } = require("./utils/db");
 
