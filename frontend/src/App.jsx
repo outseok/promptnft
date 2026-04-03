@@ -14,6 +14,7 @@ import {
   checkAdmin,
   adminDeleteNFT,
   adminForceDelist,
+  setWalletHeader,
 } from "./api";
 import {
   onChainMint,
@@ -57,10 +58,15 @@ function App() {
 
   useEffect(() => {
     if (wallet.account) {
+      setWalletHeader(wallet.account);
       loadMyNFTs();
       checkAdmin().then((r) => setIsAdminUser(r.isAdmin)).catch(() => setIsAdminUser(false));
     } else {
+      setWalletHeader(null);
       setIsAdminUser(false);
+      setExecResult(null);
+      setExecTokenId("");
+      setExecInput("");
     }
   }, [wallet.account]);
 

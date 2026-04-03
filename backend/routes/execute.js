@@ -57,6 +57,15 @@ router.post("/", async (req, res, next) => {
       });
     }
 
+    // ── STEP 1.5: 창작자 실행 차단 (본인이 만든 NFT는 실행 불가) ──
+    const nftMeta = db.prepare("SELECT creator_address FROM nfts WHERE token_id = ?").get(String(tokenId));
+    if (nftMeta && nftMeta.creator_address === wallet.toLowerCase()) {
+      logger.warn(`창작자 실행 차단 — wallet=${wallet.slice(0,8)}... tokenId=${tokenId}`);
+      return res.status(403).json({
+        error: "창작자는 자신이 만든 NFT를 실행할 수 없습니다. 프롬프트 원문을 이미 알고 있기 때문입니다."
+      });
+    }
+
     // ── STEP 2: 사용량 확인 ──
     const usage = db
       .prepare("SELECT count FROM usage WHERE wallet = ? AND token_id = ?")
