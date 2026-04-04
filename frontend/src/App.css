@@ -284,3 +284,92 @@ body {
   font-size: 0.9rem;
 }
 .team { font-size: 0.8rem; margin-top: 4px; }
+
+/* ── 민팅 모드 토글 ── */
+.mint-mode-toggle {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.toggle-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+.toggle-option.active {
+  border-color: var(--primary);
+  background: rgba(108, 92, 231, 0.1);
+}
+.toggle-option input[type="radio"] { display: none; }
+.hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── 배지 추가 ── */
+.badge.lazy {
+  background: #0984e3;
+  color: white;
+  font-weight: 600;
+}
+.badge.resale {
+  background: #00b894;
+  color: white;
+  font-weight: 600;
+}
+
+/* ── DB 뷰어 ── */
+.db-viewer {
+  margin-top: 16px;
+}
+.db-tables {
+  margin-top: 16px;
+}
+.table-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.db-data {
+  margin-top: 16px;
+}
+.table-scroll {
+  overflow-x: auto;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+.table-scroll th,
+.table-scroll td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.table-scroll th {
+  background: var(--surface-light);
+  color: var(--primary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+.table-scroll tr:hover td {
+  background: rgba(108, 92, 231, 0.05);
+}

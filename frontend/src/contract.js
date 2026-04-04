@@ -52,10 +52,10 @@ export async function checkOwnership(provider, tokenId, wallet) {
   }
 }
 
-// 온체인 민팅 — 누구나 가능 (msg.sender에게 발행)
-export async function onChainMint(signer, tokenURI) {
+// 온체인 민팅 — 누구나 가능 (msg.sender에게 발행) + 사용 횟수 설정
+export async function onChainMint(signer, tokenURI, usageLimit = 50) {
   const contract = getWriteContract(signer);
-  const tx = await contract.mint(tokenURI);
+  const tx = await contract.mint(tokenURI, usageLimit);
   const receipt = await tx.wait();
 
   // Minted 이벤트에서 tokenId 추출
@@ -74,6 +74,55 @@ export async function onChainMint(signer, tokenURI) {
   }
 
   return { tokenId: null, txHash: receipt.hash };
+}
+
+// ── 거래 시 민팅 (Lazy Mint + Buy) — 구매자가 호출 ──
+export async function onChainLazyMintAndBuy(signer, tokenURI, creatorAddress, usageLimit, priceEth) {
+  const contract = getWriteContract(signer);
+  const tx = await contract.lazyMintAndBuy(tokenURI, creatorAddress, usageLimit, {
+    value: parseEther(priceEth),
+  });
+  const receipt = await tx.wait();
+
+  // LazyMinted 이벤트에서 tokenId 추출
+  const event = receipt.logs.find((log) => {
+    try {
+      const parsed = contract.interface.parseLog(log);
+      return parsed?.name === "LazyMinted";
+    } catch {
+      return false;
+    }
+  });
+
+  if (event) {
+    const parsed = contract.interface.parseLog(event);
+    return { tokenId: Number(parsed.args.tokenId), txHash: receipt.hash };
+  }
+
+  return { tokenId: null, txHash: receipt.hash };
+}
+
+// ── 사용 기록 (on-chain) — Etherscan에 영구 기록 ──
+export async function onChainRecordUsage(signer, tokenId) {
+  const contract = getWriteContract(signer);
+  const tx = await contract.recordUsage(tokenId);
+  const receipt = await tx.wait();
+  return receipt.hash;
+}
+
+// ── 잔여 사용량 조회 (on-chain) ──
+export async function getOnChainUsage(provider, tokenId) {
+  try {
+    const contract = getReadContract(provider);
+    const result = await contract.getRemainingUsage(tokenId);
+    return {
+      remaining: Number(result.remaining),
+      limit: Number(result.limit),
+      used: Number(result.used),
+    };
+  } catch {
+    return { remaining: 0, limit: 0, used: 0 };
+  }
 }
 
 // 판매 등록 (온체인)

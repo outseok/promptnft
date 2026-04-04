@@ -10,10 +10,14 @@ router.post("/mint", (req, res) => {
     const {
       token_id, title, description, prompt_encrypted,
       creator_address, price, category, image_url,
+      mint_mode, max_executions,
     } = req.body;
 
-    if (!token_id && token_id !== 0) {
-      return res.status(400).json({ success: false, error: "token_id 필수" });
+    // lazy mint는 token_id 없이도 가능
+    const isLazy = mint_mode === "lazy";
+
+    if (!isLazy && !token_id && token_id !== 0) {
+      return res.status(400).json({ success: false, error: "token_id 필수 (직접 민팅)" });
     }
     if (!title || typeof title !== "string" || title.trim().length === 0) {
       return res.status(400).json({ success: false, error: "title 필수" });
@@ -25,13 +29,20 @@ router.post("/mint", (req, res) => {
       return res.status(400).json({ success: false, error: "유효한 creator_address 필수" });
     }
 
-    const existing = queries.getNFTByTokenId(Number(token_id));
-    if (existing) {
-      return res.status(409).json({ success: false, error: "이미 등록된 token_id" });
+    let finalTokenId;
+    if (isLazy) {
+      // 거래 시 민팅: 임시 음수 token_id 부여
+      finalTokenId = queries.getNextLazyTokenId();
+    } else {
+      finalTokenId = Number(token_id);
+      const existing = queries.getNFTByTokenId(finalTokenId);
+      if (existing) {
+        return res.status(409).json({ success: false, error: "이미 등록된 token_id" });
+      }
     }
 
     const result = queries.insertNFT({
-      token_id: Number(token_id),
+      token_id: finalTokenId,
       title: title.trim(),
       description: description || "",
       prompt_encrypted,
@@ -40,14 +51,17 @@ router.post("/mint", (req, res) => {
       price: price || "0",
       category: category || null,
       image_url: image_url || null,
+      max_executions: max_executions || 50,
+      mint_mode: isLazy ? "lazy" : "direct",
+      is_minted: isLazy ? 0 : 1,
     });
 
-    console.log(`[민팅 저장] tokenId=${token_id}, creator=${creator_address}`);
+    console.log(`[민팅 저장] tokenId=${finalTokenId}, mode=${isLazy ? "lazy" : "direct"}, creator=${creator_address}`);
 
     res.status(201).json({
       success: true,
-      message: "NFT 민팅 데이터 저장 완료",
-      data: { id: result.lastInsertRowid, token_id: Number(token_id) },
+      message: isLazy ? "거래 시 민팅 등록 완료 (구매 시 온체인 민팅)" : "NFT 민팅 데이터 저장 완료",
+      data: { id: result.lastInsertRowid, token_id: finalTokenId, mint_mode: isLazy ? "lazy" : "direct" },
     });
   } catch (err) {
     console.error("[POST /mint] 오류:", err.message);
@@ -57,7 +71,7 @@ router.post("/mint", (req, res) => {
 
 router.post("/buy", (req, res) => {
   try {
-    const { token_id, buyer_address, price, tx_hash } = req.body;
+    const { token_id, buyer_address, price, tx_hash, new_token_id } = req.body;
 
     if (!token_id && token_id !== 0) {
       return res.status(400).json({ success: false, error: "token_id 필수" });
@@ -74,6 +88,32 @@ router.post("/buy", (req, res) => {
       return res.status(400).json({ success: false, error: "판매 중이 아닌 NFT" });
     }
 
+    // lazy mint 구매: token_id 업데이트
+    if (nft.mint_mode === "lazy" && !nft.is_minted && new_token_id !== undefined) {
+      queries.updateTokenIdAfterLazyMint(
+        Number(token_id),
+        Number(new_token_id),
+        buyer_address.toLowerCase()
+      );
+
+      queries.insertTransaction({
+        token_id: Number(new_token_id),
+        from_address: nft.creator_address,
+        to_address: buyer_address.toLowerCase(),
+        price: price || nft.price,
+        tx_hash: tx_hash || null,
+      });
+
+      console.log(`[Lazy 구매] oldId=${token_id} → newId=${new_token_id}, buyer=${buyer_address}`);
+
+      return res.json({
+        success: true,
+        message: "Lazy Mint + 구매 처리 완료",
+        data: { token_id: Number(new_token_id), new_owner: buyer_address.toLowerCase(), mint_mode: "lazy" },
+      });
+    }
+
+    // 일반 구매 (직접 민팅 or 재판매)
     queries.updateOwner({
       new_owner: buyer_address.toLowerCase(),
       price: price || nft.price,

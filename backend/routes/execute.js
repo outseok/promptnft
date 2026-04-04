@@ -6,10 +6,9 @@ const router = require("express").Router();
 const { verifyOwnership } = require("../utils/blockchain");
 const { decrypt } = require("../utils/crypto");
 const db = require("../utils/db");
+const { queries } = require("../utils/db");
 const logger = require("../utils/logger");
 const OpenAI = require("openai");
-
-const USAGE_LIMIT = 50;
 
 // OpenAI 클라이언트 (API 키가 없으면 데모 모드)
 let openai = null;
@@ -66,15 +65,15 @@ router.post("/", async (req, res, next) => {
       });
     }
 
-    // ── STEP 2: 사용량 확인 ──
-    const usage = db
-      .prepare("SELECT count FROM usage WHERE wallet = ? AND token_id = ?")
-      .get(wallet.toLowerCase(), String(tokenId));
+    // ── STEP 2: 사용량 확인 (토큰 단위 — 재판매 시 잔여 사용량 유지) ──
+    const nftUsage = queries.getNFTByTokenId(Number(tokenId));
+    const maxExec = nftUsage?.max_executions || 50;
+    const curExec = nftUsage?.execution_count || 0;
 
-    if (usage && usage.count >= USAGE_LIMIT) {
-      logger.warn(`사용량 초과 — wallet=${wallet.slice(0,8)}... tokenId=${tokenId}`);
+    if (curExec >= maxExec) {
+      logger.warn(`사용량 초과 — tokenId=${tokenId} (${curExec}/${maxExec})`);
       return res.status(429).json({
-        error: `사용량 한도 초과 (최대 ${USAGE_LIMIT}회)`
+        error: `사용량 한도 초과 (${curExec}/${maxExec}회)`
       });
     }
 
@@ -116,21 +115,20 @@ router.post("/", async (req, res, next) => {
         `실제 연동을 위해 .env에 OPENAI_API_KEY를 설정하세요.`;
     }
 
-    // ── STEP 5: 사용량 업데이트 ──
-    db.prepare(`
-      INSERT INTO usage (wallet, token_id, count) VALUES (?, ?, 1)
-      ON CONFLICT(wallet, token_id) DO UPDATE SET count = count + 1
-    `).run(wallet.toLowerCase(), String(tokenId));
+    // ── STEP 5: 사용량 업데이트 (토큰 단위) ──
+    queries.incrementExecution(Number(tokenId));
+    queries.insertExecutionLog(Number(tokenId), wallet.toLowerCase());
 
-    const newCount = (usage?.count ?? 0) + 1;
-    logger.info(`실행 완료 — tokenId=${tokenId} 사용횟수=${newCount}/${USAGE_LIMIT}`);
+    const newCount = curExec + 1;
+    logger.info(`실행 완료 — tokenId=${tokenId} 사용횟수=${newCount}/${maxExec}`);
 
     // ── STEP 6: 결과 반환 ──
     res.json({
       success: true,
       result,
       usageCount: newCount,
-      usageLeft: USAGE_LIMIT - newCount,
+      usageLeft: maxExec - newCount,
+      usageLimit: maxExec,
       aiEnabled: !!openai,
       executionInfo: req.executionInfo || null,
     });

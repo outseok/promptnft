@@ -15,12 +15,17 @@ import {
   adminDeleteNFT,
   adminForceDelist,
   setWalletHeader,
+  getDBTables,
+  getDBTableData,
 } from "./api";
 import {
   onChainMint,
   onChainBuy,
   onChainListForSale,
   onChainCancelListing,
+  onChainLazyMintAndBuy,
+  onChainRecordUsage,
+  getOnChainUsage,
   getNextTokenId,
   deployContract,
   getContractAddress,
@@ -44,12 +49,19 @@ function App() {
     prompt: "",
     price: "0.01",
     category: "general",
+    mintMode: "direct",     // 'direct' = 직접 민팅, 'lazy' = 거래 시 민팅
+    maxExecutions: "50",    // 최대 사용 횟수
   });
 
   // ── 실행 폼 ──
   const [execTokenId, setExecTokenId] = useState("");
   const [execInput, setExecInput] = useState("");
   const [execResult, setExecResult] = useState(null);
+
+  // ── DB 뷰어 (관리자) ──
+  const [dbTables, setDbTables] = useState([]);
+  const [dbSelectedTable, setDbSelectedTable] = useState("");
+  const [dbTableData, setDbTableData] = useState([]);
 
   // NFT 목록 로드
   useEffect(() => {
@@ -88,7 +100,7 @@ function App() {
     }
   }
 
-  // ── 민팅 (온체인 + 백엔드) ──
+  // ── 민팅 (직접 민팅 or 거래 시 민팅) ──
   async function handleMint(e) {
     e.preventDefault();
     if (!wallet.isConnected) {
@@ -98,47 +110,91 @@ function App() {
     setLoading(true);
     setMessage("");
 
+    const isLazy = mintForm.mintMode === "lazy";
+    const usageLimit = Number(mintForm.maxExecutions) || 50;
+
     try {
-      // 1. 온체인 민팅 (MetaMask 트랜잭션)
-      setMessage("MetaMask에서 민팅 트랜잭션을 승인해주세요...");
       const tokenURI = JSON.stringify({
         title: mintForm.title,
         description: mintForm.description,
         category: mintForm.category,
       });
 
-      const { tokenId, txHash } = await onChainMint(wallet.signer, tokenURI);
+      let finalTokenId;
+      let txHash = null;
 
-      const finalTokenId = tokenId ?? (await getNextTokenId(wallet.provider) - 1);
+      if (isLazy) {
+        // ── 거래 시 민팅: 백엔드에만 등록 (온체인 민팅 없음) ──
+        setMessage("거래 시 민팅 등록 중... (온체인 민팅은 구매 시 발생)");
 
-      setMessage(`온체인 민팅 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 저장 중...`);
+        // 프롬프트 암호화 먼저
+        await encryptPrompt({
+          tokenId: "__lazy_pending__",
+          promptContent: mintForm.prompt,
+          walletAddress: wallet.account,
+        });
 
-      // 2. 프롬프트 암호화 저장 (백엔드)
-      await encryptPrompt({
-        tokenId: finalTokenId,
-        promptContent: mintForm.prompt,
-        walletAddress: wallet.account,
-      });
+        // 백엔드에 lazy 등록
+        const mintRes = await mintNFT({
+          title: mintForm.title,
+          description: mintForm.description,
+          prompt_encrypted: "[encrypted]",
+          creator_address: wallet.account,
+          price: mintForm.price,
+          category: mintForm.category,
+          mint_mode: "lazy",
+          max_executions: usageLimit,
+        });
 
-      // 3. NFT 메타데이터 백엔드 저장
-      await mintNFT({
-        token_id: finalTokenId,
-        title: mintForm.title,
-        description: mintForm.description,
-        prompt_encrypted: "[encrypted]",
-        creator_address: wallet.account,
-        price: mintForm.price,
-        category: mintForm.category,
-      });
+        finalTokenId = mintRes.data.token_id;
 
-      // 4. 온체인 판매 등록 (민팅 후 자동으로 마켓에 올림)
-      if (Number(mintForm.price) > 0) {
-        setMessage(`NFT #${finalTokenId} 민팅 완료! 판매 등록 중...`);
-        await onChainListForSale(wallet.signer, finalTokenId, String(mintForm.price));
+        // 프롬프트 암호화 업데이트 (실제 tokenId로)
+        await encryptPrompt({
+          tokenId: finalTokenId,
+          promptContent: mintForm.prompt,
+          walletAddress: wallet.account,
+        });
+
+        setMessage(`거래 시 민팅 등록 완료! (ID: ${finalTokenId}) — 구매자가 나타나면 자동 민팅됩니다.`);
+      } else {
+        // ── 직접 민팅: 온체인 + 백엔드 ──
+        setMessage("MetaMask에서 민팅 트랜잭션을 승인해주세요...");
+        const result = await onChainMint(wallet.signer, tokenURI, usageLimit);
+        txHash = result.txHash;
+        finalTokenId = result.tokenId ?? (await getNextTokenId(wallet.provider) - 1);
+
+        setMessage(`온체인 민팅 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 저장 중...`);
+
+        // 프롬프트 암호화 저장
+        await encryptPrompt({
+          tokenId: finalTokenId,
+          promptContent: mintForm.prompt,
+          walletAddress: wallet.account,
+        });
+
+        // NFT 메타데이터 백엔드 저장
+        await mintNFT({
+          token_id: finalTokenId,
+          title: mintForm.title,
+          description: mintForm.description,
+          prompt_encrypted: "[encrypted]",
+          creator_address: wallet.account,
+          price: mintForm.price,
+          category: mintForm.category,
+          mint_mode: "direct",
+          max_executions: usageLimit,
+        });
+
+        // 온체인 판매 등록
+        if (Number(mintForm.price) > 0) {
+          setMessage(`NFT #${finalTokenId} 민팅 완료! 판매 등록 중...`);
+          await onChainListForSale(wallet.signer, finalTokenId, String(mintForm.price));
+        }
+
+        setMessage(`NFT #${finalTokenId} 민팅 + 판매 등록 성공! (tx: ${txHash.slice(0, 10)}...)`);
       }
 
-      setMessage(`NFT #${finalTokenId} 민팅 + 판매 등록 성공! (tx: ${txHash.slice(0, 10)}...)`);
-      setMintForm({ title: "", description: "", prompt: "", price: "0.01", category: "general" });
+      setMintForm({ title: "", description: "", prompt: "", price: "0.01", category: "general", mintMode: mintForm.mintMode, maxExecutions: "50" });
       loadNFTs();
       loadMyNFTs();
     } catch (err) {
@@ -149,8 +205,8 @@ function App() {
     }
   }
 
-  // ── 구매 (온체인 ETH 전송 + 백엔드 동기화) ──
-  async function handleBuy(tokenId, price) {
+  // ── 구매 (직접 민팅 NFT or 거래 시 민팅 NFT) ──
+  async function handleBuy(nft) {
     if (!wallet.isConnected) {
       setMessage("지갑을 먼저 연결하세요!");
       return;
@@ -159,21 +215,54 @@ function App() {
     setMessage("");
 
     try {
-      // 1. 온체인 구매 (MetaMask에서 ETH 전송 승인)
-      setMessage("MetaMask에서 구매 트랜잭션을 승인해주세요...");
-      const txHash = await onChainBuy(wallet.signer, tokenId, String(price));
+      const isLazy = nft.mint_mode === "lazy" && !nft.is_minted;
 
-      setMessage(`온체인 구매 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 동기화 중...`);
+      if (isLazy) {
+        // ── 거래 시 민팅: lazyMintAndBuy 호출 ──
+        setMessage("MetaMask에서 Lazy Mint + 구매 트랜잭션을 승인해주세요...");
+        const tokenURI = JSON.stringify({
+          title: nft.title,
+          description: nft.description,
+          category: nft.category,
+        });
 
-      // 2. 백엔드 DB 소유자 업데이트
-      await buyNFT({
-        token_id: tokenId,
-        buyer_address: wallet.account,
-        price: price,
-        tx_hash: txHash,
-      });
+        const { tokenId: newTokenId, txHash } = await onChainLazyMintAndBuy(
+          wallet.signer,
+          tokenURI,
+          nft.creator_address,
+          nft.max_executions || 50,
+          String(nft.price)
+        );
 
-      setMessage(`NFT #${tokenId} 구매 성공! Etherscan에서 확인: https://sepolia.etherscan.io/tx/${txHash} (Internal Transactions 탭에서 판매자에게 ETH 전송 확인 가능)`);
+        setMessage(`온체인 민팅+구매 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 동기화 중...`);
+
+        // 백엔드 DB 업데이트 (lazy → 실제 tokenId)
+        await buyNFT({
+          token_id: nft.token_id,
+          buyer_address: wallet.account,
+          price: nft.price,
+          tx_hash: txHash,
+          new_token_id: newTokenId,
+        });
+
+        setMessage(`NFT #${newTokenId} Lazy Mint + 구매 성공! Etherscan: https://sepolia.etherscan.io/tx/${txHash}`);
+      } else {
+        // ── 일반 구매 (이미 온체인에 존재하는 NFT) ──
+        setMessage("MetaMask에서 구매 트랜잭션을 승인해주세요...");
+        const txHash = await onChainBuy(wallet.signer, nft.token_id, String(nft.price));
+
+        setMessage(`온체인 구매 완료 (tx: ${txHash.slice(0, 10)}...) 백엔드 동기화 중...`);
+
+        await buyNFT({
+          token_id: nft.token_id,
+          buyer_address: wallet.account,
+          price: nft.price,
+          tx_hash: txHash,
+        });
+
+        setMessage(`NFT #${nft.token_id} 구매 성공! Etherscan: https://sepolia.etherscan.io/tx/${txHash}`);
+      }
+
       loadNFTs();
       loadMyNFTs();
     } catch (err) {
@@ -188,7 +277,7 @@ function App() {
     }
   }
 
-  // ── 프롬프트 실행 (소유권 확인 후) ──
+  // ── 프롬프트 실행 (on-chain 사용 기록 + AI 호출) ──
   async function handleExecute(e) {
     e.preventDefault();
     if (!wallet.isConnected) {
@@ -200,10 +289,25 @@ function App() {
     setExecResult(null);
 
     try {
-      // 1. 서명 생성 (소유권은 백엔드에서 온체인 검증)
+      // 1. on-chain 사용 기록 (Etherscan에 영구 기록)
+      setMessage("MetaMask에서 사용 기록 트랜잭션을 승인해주세요... (Etherscan에 기록됩니다)");
+      try {
+        await onChainRecordUsage(wallet.signer, Number(execTokenId));
+      } catch (chainErr) {
+        const reason = chainErr.reason || chainErr.message || "";
+        if (reason.includes("Usage limit reached")) {
+          setMessage("실행 실패: 사용 횟수가 모두 소진되었습니다 (on-chain).");
+          setLoading(false);
+          return;
+        }
+        // 온체인 기록 실패 시 (네트워크 문제 등) 백엔드만으로 진행
+        console.warn("온체인 사용 기록 실패 (DB 폴백):", reason);
+      }
+
+      // 2. 서명 + 실행 요청
+      setMessage("AI 실행 중...");
       const { nonce, signature } = await wallet.signMessage();
 
-      // 2. 실행 요청
       const res = await executePrompt(
         {
           tokenId: Number(execTokenId),
@@ -386,11 +490,16 @@ function App() {
               {nfts.map((nft) => (
                 <div key={nft.token_id} className="nft-card">
                   <div className="nft-card-header">
-                    <span className="token-id">#{nft.token_id}</span>
-                    {nft.is_for_sale ? (
+                    <span className="token-id">#{nft.token_id >= 0 ? nft.token_id : `L${Math.abs(nft.token_id)}`}</span>
+                    {nft.mint_mode === "lazy" && !nft.is_minted ? (
+                      <span className="badge lazy">거래 시 민팅</span>
+                    ) : nft.is_for_sale ? (
                       <span className="badge sale">판매중</span>
                     ) : (
                       <span className="badge">보유중</span>
+                    )}
+                    {nft.execution_count > 0 && nft.creator_address !== nft.owner_address && (
+                      <span className="badge resale">재판매</span>
                     )}
                   </div>
                   <h3>{nft.title}</h3>
@@ -398,16 +507,20 @@ function App() {
                   <div className="nft-meta">
                     <span>가격: {nft.price} ETH</span>
                     <span>카테고리: {nft.category || "-"}</span>
-                    <span>실행: {nft.execution_count}/{nft.max_executions}</span>
+                    <span>사용: {nft.execution_count}/{nft.max_executions}회</span>
                   </div>
-                  <p className="owner">소유자: {nft.owner_address?.slice(0, 8)}...</p>
+                  <p className="owner">
+                    {nft.mint_mode === "lazy" && !nft.is_minted
+                      ? `창작자: ${nft.creator_address?.slice(0, 8)}...`
+                      : `소유자: ${nft.owner_address?.slice(0, 8)}...`}
+                  </p>
                   {nft.is_for_sale && wallet.isConnected && nft.owner_address !== wallet.account?.toLowerCase() && (
                     <button
-                      onClick={() => handleBuy(nft.token_id, nft.price)}
+                      onClick={() => handleBuy(nft)}
                       className="btn btn-primary"
                       disabled={loading}
                     >
-                      구매하기
+                      {nft.mint_mode === "lazy" && !nft.is_minted ? "민팅 + 구매" : "구매하기"}
                     </button>
                   )}
                   {isAdminUser && (
@@ -446,11 +559,15 @@ function App() {
                     <span className={`badge ${nft.is_for_sale ? "sale" : ""}`}>
                       {nft.is_for_sale ? "판매중" : "보유중"}
                     </span>
+                    {nft.creator_address !== nft.owner_address && (
+                      <span className="badge resale">구매함</span>
+                    )}
                   </div>
                   <h3>{nft.title}</h3>
                   <p className="description">{nft.description || "설명 없음"}</p>
                   <div className="nft-meta">
-                    <span>실행: {nft.execution_count}/{nft.max_executions}</span>
+                    <span>사용: {nft.execution_count}/{nft.max_executions}회</span>
+                    <span>잔여: {(nft.max_executions || 50) - (nft.execution_count || 0)}회</span>
                   </div>
                   <div className="nft-actions">
                     <button
@@ -481,6 +598,36 @@ function App() {
             <p className="empty">지갑을 연결해야 민팅할 수 있습니다.</p>
           ) : (
             <form onSubmit={handleMint} className="form">
+              <div className="form-group">
+                <label>민팅 방식</label>
+                <div className="mint-mode-toggle">
+                  <label className={`toggle-option ${mintForm.mintMode === "direct" ? "active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="mintMode"
+                      value="direct"
+                      checked={mintForm.mintMode === "direct"}
+                      onChange={(e) => setMintForm({ ...mintForm, mintMode: e.target.value })}
+                    />
+                    직접 민팅 (즉시 온체인)
+                  </label>
+                  <label className={`toggle-option ${mintForm.mintMode === "lazy" ? "active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="mintMode"
+                      value="lazy"
+                      checked={mintForm.mintMode === "lazy"}
+                      onChange={(e) => setMintForm({ ...mintForm, mintMode: e.target.value })}
+                    />
+                    거래 시 민팅 (구매 시 온체인)
+                  </label>
+                </div>
+                <p className="hint">
+                  {mintForm.mintMode === "direct"
+                    ? "즉시 온체인에 NFT를 생성합니다. MetaMask 승인 2회 (민팅 + 판매등록)"
+                    : "데이터만 등록하고 구매자가 나타나면 자동으로 온체인 민팅됩니다. MetaMask 승인 불필요."}
+                </p>
+              </div>
               <div className="form-group">
                 <label>제목</label>
                 <input
@@ -520,6 +667,16 @@ function App() {
                   />
                 </div>
                 <div className="form-group">
+                  <label>최대 사용 횟수</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={mintForm.maxExecutions}
+                    onChange={(e) => setMintForm({ ...mintForm, maxExecutions: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
                   <label>카테고리</label>
                   <select
                     value={mintForm.category}
@@ -534,7 +691,7 @@ function App() {
                 </div>
               </div>
               <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? "민팅 중..." : "민팅하기"}
+                {loading ? "민팅 중..." : mintForm.mintMode === "lazy" ? "등록하기 (온체인 민팅 없음)" : "민팅하기"}
               </button>
             </form>
           )}
@@ -580,8 +737,9 @@ function App() {
                   <h3>실행 결과</h3>
                   <pre>{execResult.result}</pre>
                   <div className="exec-meta">
-                    <span>사용 횟수: {execResult.usageCount}</span>
+                    <span>사용 횟수: {execResult.usageCount}/{execResult.usageLimit || "?"}</span>
                     <span>남은 횟수: {execResult.usageLeft}</span>
+                    <span>📋 Etherscan에서 사용 기록 확인 가능</span>
                   </div>
                 </div>
               )}
@@ -611,6 +769,82 @@ function App() {
               </button>
             </div>
           )}
+
+          {/* ── DB 뷰어 (관리자 전용) ── */}
+          <h2 style={{marginTop: "2rem"}}>DB 조회</h2>
+          <div className="db-viewer">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await getDBTables();
+                  setDbTables(res.tables || []);
+                  setDbSelectedTable("");
+                  setDbTableData([]);
+                } catch (err) {
+                  setMessage("DB 조회 실패: " + (err.response?.data?.error || err.message));
+                }
+              }}
+              className="btn btn-outline"
+              disabled={loading}
+            >
+              테이블 목록 로드
+            </button>
+
+            {dbTables.length > 0 && (
+              <div className="db-tables">
+                <h3>테이블 목록</h3>
+                <div className="table-list">
+                  {dbTables.map((t) => (
+                    <button
+                      key={t.name}
+                      onClick={async () => {
+                        try {
+                          const res = await getDBTableData(t.name);
+                          setDbSelectedTable(t.name);
+                          setDbTableData(res.data || []);
+                        } catch (err) {
+                          setMessage("테이블 데이터 조회 실패: " + (err.response?.data?.error || err.message));
+                        }
+                      }}
+                      className={`btn btn-sm ${dbSelectedTable === t.name ? "btn-primary" : "btn-outline"}`}
+                    >
+                      {t.name} ({t.count})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {dbSelectedTable && dbTableData.length > 0 && (
+              <div className="db-data">
+                <h3>{dbSelectedTable} (최근 100건)</h3>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        {Object.keys(dbTableData[0]).map((col) => (
+                          <th key={col}>{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dbTableData.map((row, i) => (
+                        <tr key={i}>
+                          {Object.values(row).map((val, j) => (
+                            <td key={j}>{String(val ?? "").slice(0, 80)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {dbSelectedTable && dbTableData.length === 0 && (
+              <p className="empty">테이블에 데이터가 없습니다.</p>
+            )}
+          </div>
         </section>
       )}
 

@@ -67,4 +67,11 @@ export const adminDeleteNFT = (tokenId) =>
 export const adminForceDelist = (tokenId) =>
   api.patch(`/admin/nfts/${tokenId}/force-delist`).then((r) => r.data);
 
+// ── DB 조회 (관리자) ──
+export const getDBTables = () =>
+  api.get("/admin/db/tables").then((r) => r.data);
+
+export const getDBTableData = (tableName) =>
+  api.get(`/admin/db/tables/${tableName}`).then((r) => r.data);
+
 export default api;

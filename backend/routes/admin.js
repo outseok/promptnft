@@ -52,4 +52,35 @@ router.patch("/nfts/:tokenId/force-delist", requireAdmin, (req, res) => {
   }
 });
 
+// ── DB 조회 (관리자 전용) ──
+router.get("/db/tables", requireAdmin, (req, res) => {
+  try {
+    const tables = queries.getTableList();
+    const result = tables.map(t => ({
+      name: t.name,
+      count: queries.getTableCount(t.name),
+    }));
+    res.json({ success: true, tables: result });
+  } catch (err) {
+    logger.error(`[관리자] DB 테이블 조회 실패: ${err.message}`);
+    res.status(500).json({ success: false, error: "DB 조회 실패" });
+  }
+});
+
+router.get("/db/tables/:tableName", requireAdmin, (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const allowed = ['nfts', 'prompts', 'usage', 'nonces', 'execution_logs', 'transactions'];
+    if (!allowed.includes(tableName)) {
+      return res.status(400).json({ success: false, error: "허용되지 않은 테이블" });
+    }
+    const data = queries.getTableData(tableName);
+    const count = queries.getTableCount(tableName);
+    res.json({ success: true, table: tableName, count, data });
+  } catch (err) {
+    logger.error(`[관리자] DB 데이터 조회 실패: ${err.message}`);
+    res.status(500).json({ success: false, error: "DB 데이터 조회 실패" });
+  }
+});
+
 module.exports = router;

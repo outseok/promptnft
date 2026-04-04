@@ -17,6 +17,10 @@ contract PromptNFT is ERC721URIStorage, ERC2981, Ownable {
     uint256 public nextTokenId;
     mapping(uint256 => Listing) public listings;
 
+    // ── 사용권 관리 (on-chain, Etherscan에서 조회 가능) ──
+    mapping(uint256 => uint256) public usageLimit;   // 최대 사용 횟수
+    mapping(uint256 => uint256) public usageCount;   // 현재 사용 횟수
+
     event Minted(uint256 indexed tokenId, address indexed to, string tokenURI);
     event Listed(uint256 indexed tokenId, address indexed seller, uint256 price);
     event Purchase(
@@ -27,6 +31,8 @@ contract PromptNFT is ERC721URIStorage, ERC2981, Ownable {
         uint256 royaltyPaid
     );
     event ListingCanceled(uint256 indexed tokenId);
+    event UsageRecorded(uint256 indexed tokenId, address indexed user, uint256 remaining);
+    event LazyMinted(uint256 indexed tokenId, address indexed creator, address indexed buyer, string tokenURI);
 
     constructor(address royaltyReceiver)
         ERC721("PromptNFT", "PRMPT")
@@ -37,16 +43,68 @@ contract PromptNFT is ERC721URIStorage, ERC2981, Ownable {
         _setDefaultRoyalty(royaltyReceiver, ROYALTY_BPS);
     }
 
-    /// @notice 누구나 NFT 민팅 가능 (msg.sender에게 발행)
-    function mint(string calldata tokenURI) external returns (uint256) {
+    /// @notice 직접 민팅 — 누구나 가능 (msg.sender에게 발행) + 사용 횟수 설정
+    function mint(string calldata _tokenURI, uint256 _usageLimit) external returns (uint256) {
         uint256 tokenId = nextTokenId;
         nextTokenId += 1;
 
         _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, _tokenURI);
+        usageLimit[tokenId] = _usageLimit;
 
-        emit Minted(tokenId, msg.sender, tokenURI);
+        emit Minted(tokenId, msg.sender, _tokenURI);
         return tokenId;
+    }
+
+    /// @notice 거래 시 민팅 (Lazy Mint + Buy) — 구매자가 호출, creator에게 ETH 지급
+    function lazyMintAndBuy(
+        string calldata _tokenURI,
+        address creator,
+        uint256 _usageLimit
+    ) external payable returns (uint256) {
+        require(msg.value > 0, "Must send ETH");
+        require(creator != address(0), "Invalid creator");
+        require(creator != msg.sender, "Cannot buy own NFT");
+
+        uint256 tokenId = nextTokenId;
+        nextTokenId += 1;
+
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, _tokenURI);
+        usageLimit[tokenId] = _usageLimit;
+
+        (address royaltyReceiver, uint256 royaltyAmount) = royaltyInfo(tokenId, msg.value);
+        uint256 creatorAmount = msg.value - royaltyAmount;
+
+        if (royaltyAmount > 0) {
+            (bool royaltyPaid, ) = payable(royaltyReceiver).call{value: royaltyAmount}("");
+            require(royaltyPaid, "Royalty transfer failed");
+        }
+
+        (bool creatorPaid, ) = payable(creator).call{value: creatorAmount}("");
+        require(creatorPaid, "Creator payment failed");
+
+        emit LazyMinted(tokenId, creator, msg.sender, _tokenURI);
+        emit Purchase(tokenId, msg.sender, creator, msg.value, royaltyAmount);
+
+        return tokenId;
+    }
+
+    /// @notice 사용 기록 (on-chain) — NFT 소유자만 호출, Etherscan에 영구 기록
+    function recordUsage(uint256 tokenId) external {
+        require(ownerOf(tokenId) == msg.sender, "Not token owner");
+        require(usageCount[tokenId] < usageLimit[tokenId], "Usage limit reached");
+
+        usageCount[tokenId] += 1;
+
+        emit UsageRecorded(tokenId, msg.sender, usageLimit[tokenId] - usageCount[tokenId]);
+    }
+
+    /// @notice 잔여 사용량 조회 (누구나 호출 가능 — 구매 전 확인용)
+    function getRemainingUsage(uint256 tokenId) external view returns (uint256 remaining, uint256 limit, uint256 used) {
+        limit = usageLimit[tokenId];
+        used = usageCount[tokenId];
+        remaining = (limit > used) ? limit - used : 0;
     }
 
     function listForSale(uint256 tokenId, uint256 price) external {
