@@ -1,50 +1,134 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { ethers } from "ethers";
+import { getNonce } from "../api";
 
-export default function useWallet() {
+// named export — WalletContext에서 { useWallet } 로 import
+export function useWallet() {
   const [account, setAccount] = useState("");
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [chainId, setChainId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const connectWallet = async () => {
+  const isConnected = Boolean(account);
+
+  // provider/signer 갱신
+  const refreshProviderSigner = useCallback(async (addr) => {
+    if (!window.ethereum || !addr) {
+      setProvider(null);
+      setSigner(null);
+      return;
+    }
+    try {
+      const bp = new ethers.BrowserProvider(window.ethereum);
+      setProvider(bp);
+      const s = await bp.getSigner();
+      setSigner(s);
+      const network = await bp.getNetwork();
+      setChainId(Number(network.chainId));
+    } catch {
+      setProvider(null);
+      setSigner(null);
+    }
+  }, []);
+
+  // 연결
+  const connect = useCallback(async () => {
     if (!window.ethereum) {
-      alert("MetaMask가 필요합니다.");
+      setError("MetaMask가 필요합니다.");
       return "";
     }
-
     try {
+      setLoading(true);
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-
-      const current = accounts[0] || "";
-      setAccount(current);
-      return current;
-    } catch (error) {
-      console.error(error);
-      alert("지갑 연결 실패");
+      const addr = accounts[0] || "";
+      setAccount(addr);
+      await refreshProviderSigner(addr);
+      setError(null);
+      return addr;
+    } catch (err) {
+      setError("지갑 연결 실패");
+      console.error(err);
       return "";
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [refreshProviderSigner]);
 
+  // 연결 해제
+  const disconnect = useCallback(() => {
+    setAccount("");
+    setProvider(null);
+    setSigner(null);
+    setChainId(null);
+  }, []);
+
+  // 서명 (nonce 기반)
+  const signMessage = useCallback(async () => {
+    if (!window.ethereum || !account) {
+      throw new Error("지갑이 연결되지 않았습니다");
+    }
+    const { nonce, message } = await getNonce(account);
+    const bp = new ethers.BrowserProvider(window.ethereum);
+    const s = await bp.getSigner();
+    const signature = await s.signMessage(message);
+    return { nonce, signature };
+  }, [account]);
+
+  // 초기 로드 + 이벤트 리스너
   useEffect(() => {
-    if (!window.ethereum) return;
+    if (!window.ethereum) {
+      setLoading(false);
+      return;
+    }
 
     const handleAccountsChanged = (accounts) => {
-      setAccount(accounts.length > 0 ? accounts[0] : "");
+      const addr = accounts.length > 0 ? accounts[0] : "";
+      setAccount(addr);
+      refreshProviderSigner(addr);
     };
 
-    window.ethereum.request({ method: "eth_accounts" }).then((accounts) => {
-      if (accounts.length > 0) {
-        setAccount(accounts[0]);
-      }
-    });
+    const handleChainChanged = () => {
+      window.location.reload();
+    };
+
+    window.ethereum
+      .request({ method: "eth_accounts" })
+      .then(async (accounts) => {
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+          await refreshProviderSigner(accounts[0]);
+        }
+      })
+      .finally(() => setLoading(false));
 
     window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
 
     return () => {
       if (window.ethereum.removeListener) {
         window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        window.ethereum.removeListener("chainChanged", handleChainChanged);
       }
     };
-  }, []);
+  }, [refreshProviderSigner]);
 
-  return { account, connectWallet };
+  return {
+    account,
+    isConnected,
+    connect,
+    disconnect,
+    provider,
+    signer,
+    chainId,
+    loading,
+    error,
+    signMessage,
+  };
 }
+
+// default export도 유지 (기존 import 호환)
+export default useWallet;
