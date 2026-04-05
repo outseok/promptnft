@@ -238,11 +238,11 @@ export function MyNFTs() {
 
 function EmptyState({ text = '보유한 NFT가 없습니다', sub = '마켓플레이스에서 NFT를 구매하거나 새로 등록해보세요' }) {
   return (
-    <div className="text-center py-16 bg-white rounded-3xl border border-orange-100">
-      <div className="w-16 h-16 bg-orange-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
-        <Store className="w-8 h-8 text-orange-400" />
+    <div className="text-center py-20 bg-white rounded-2xl border border-orange-100/60">
+      <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <Store className="w-8 h-8 text-orange-300" />
       </div>
-      <p className="text-gray-600 text-lg mb-2">{text}</p>
+      <p className="text-gray-600 font-medium mb-1">{text}</p>
       <p className="text-gray-400 text-sm">{sub}</p>
     </div>
   );
@@ -293,7 +293,7 @@ function NFTOwnedCard({ nft, onNavigate, onExecute, onToggleSale }) {
           <Button
             onClick={(e) => { e.stopPropagation(); onExecute(); }}
             size="sm"
-            className="flex-1 bg-gradient-to-r from-orange-400 to-orange-300 hover:from-orange-500 hover:to-orange-400 text-white"
+            className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white shadow-sm"
           >
             <Play className="w-3 h-3 mr-1" />
             실행

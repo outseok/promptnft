@@ -393,7 +393,7 @@ export function Admin() {
                     size="sm"
                     onClick={() => loadTableData(t)}
                     className={selectedTable === t
-                      ? 'bg-gradient-to-r from-orange-400 to-orange-300 text-white'
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white'
                       : 'border-orange-200 text-gray-600 hover:bg-orange-50'}
                   >
                     <Database className="w-3 h-3 mr-1" />
@@ -491,7 +491,7 @@ export function Admin() {
                   placeholder="0x..."
                   className="bg-orange-50/50 border-orange-100 rounded-xl font-mono text-sm"
                 />
-                <Button onClick={handleSetAddress} className="bg-gradient-to-r from-orange-400 to-orange-300 text-white whitespace-nowrap">
+                <Button onClick={handleSetAddress} className="bg-gradient-to-r from-orange-500 to-amber-400 text-white whitespace-nowrap">
                   변경
                 </Button>
               </div>
@@ -509,7 +509,7 @@ export function Admin() {
               <Button
                 onClick={handleDeploy}
                 disabled={deploying}
-                className="w-full bg-gradient-to-r from-orange-400 to-orange-300 hover:from-orange-500 hover:to-orange-400 text-white py-6 text-base"
+                className="w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white py-6 text-base shadow-md shadow-orange-200/40"
               >
                 {deploying ? (
                   <>

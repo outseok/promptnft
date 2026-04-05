@@ -6,7 +6,7 @@ import { onChainBuy, onChainLazyMintAndBuy } from '../contract';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { useWallet } from '../context/WalletContext';
-import { ArrowLeft, CheckCircle2, Store } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Store, Zap, Tag, User, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function NFTDetail() {
@@ -73,22 +73,33 @@ export function NFTDetail() {
 
   if (loading) {
     return (
-      <div className="text-center py-16 text-gray-500">
-        로딩 중...
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 mx-auto bg-orange-50 rounded-2xl flex items-center justify-center animate-pulse">
+            <Sparkles className="w-6 h-6 text-orange-300" />
+          </div>
+          <p className="text-gray-400 text-sm">로딩 중...</p>
+        </div>
       </div>
     );
   }
 
   if (!nft) {
     return (
-      <div className="text-center py-16 text-gray-500">
-        NFT를 찾을 수 없습니다
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 mx-auto bg-gray-50 rounded-2xl flex items-center justify-center">
+            <span className="text-3xl">🔍</span>
+          </div>
+          <p className="text-gray-500 font-medium">NFT를 찾을 수 없습니다</p>
+        </div>
       </div>
     );
   }
 
   const isOwner = address && nft.owner_address === address.toLowerCase();
   const remaining = (nft.max_executions || 100) - (nft.execution_count || 0);
+  const usagePercent = Math.round((remaining / (nft.max_executions || 100)) * 100);
 
   return (
     <div className="space-y-6">
@@ -182,9 +193,21 @@ export function NFTDetail() {
               <div className="text-gray-800 font-mono text-sm">{nft.creator_address}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 mb-1">남은 실행 횟수</div>
-              <div className="text-gray-800 font-semibold">
-                {remaining} / {nft.max_executions || 100}회
+              <div className="text-sm text-gray-500 mb-2">남은 실행 횟수</div>
+              <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="text-gray-800 font-semibold flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-orange-400" />
+                  {remaining} / {nft.max_executions || 100}회
+                </span>
+                <span className={`text-xs font-medium ${usagePercent > 50 ? 'text-green-600' : usagePercent > 20 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {usagePercent}%
+                </span>
+              </div>
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${usagePercent > 50 ? 'bg-green-400' : usagePercent > 20 ? 'bg-amber-400' : 'bg-red-400'}`}
+                  style={{ width: `${usagePercent}%` }}
+                />
               </div>
             </div>
           </div>
@@ -201,7 +224,7 @@ export function NFTDetail() {
               <Button
                 onClick={handleBuy}
                 disabled={!isConnected}
-                className="w-full bg-gradient-to-r from-orange-400 to-orange-300 hover:from-orange-500 hover:to-orange-400 text-white py-6 text-lg shadow-sm"
+                className="w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white py-6 text-lg shadow-md shadow-orange-200/40 hover:shadow-lg hover:shadow-orange-300/40 transition-all"
               >
                 {isConnected ? '구매하기' : '지갑을 먼저 연결하세요'}
               </Button>

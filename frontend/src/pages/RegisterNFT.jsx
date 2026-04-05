@@ -167,7 +167,7 @@ export function RegisterNFT() {
           </div>
           <Button
             onClick={() => setSubmitted(false)}
-            className="bg-gradient-to-r from-orange-400 to-orange-300 hover:from-orange-500 hover:to-orange-400 text-white"
+            className="bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white shadow-md shadow-orange-200/40"
           >
             {'\uc0c8 NFT \ub4f1\ub85d\ud558\uae30'}
           </Button>
@@ -361,7 +361,7 @@ export function RegisterNFT() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-orange-400 to-orange-300 hover:from-orange-500 hover:to-orange-400 text-white py-6 text-base font-medium shadow-sm"
+            className="w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white py-6 text-base font-medium shadow-md shadow-orange-200/40 hover:shadow-lg hover:shadow-orange-300/40 transition-all"
           >
             {loading ? '\ub4f1\ub85d \uc911...' : (
               <>

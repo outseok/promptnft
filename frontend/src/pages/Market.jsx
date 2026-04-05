@@ -5,7 +5,7 @@ import { useWallet } from '../context/WalletContext';
 import { getNFTs, buyNFT } from '../api';
 import { onChainBuy, onChainLazyMintAndBuy } from '../contract';
 import { Input } from '../components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Sparkles, ShoppingBag, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function Market() {
@@ -86,13 +86,30 @@ export function Market() {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="space-y-4">
-        <h1 className="text-4xl font-bold text-gray-800">
-          AI 프롬프트 마켓플레이스
-        </h1>
-        <p className="text-lg text-gray-600">
-          손쉬운 AI 실행 권한을 NFT로 거래하세요. 프롬프트 엔지니어들이 공개합니다.
-        </p>
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-amber-400 to-orange-300 p-8 sm:p-10">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wOCI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
+        <div className="relative z-10 max-w-2xl">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs font-semibold">
+              <Zap className="w-3.5 h-3.5" />
+              Sepolia Testnet
+            </div>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 leading-tight">
+            AI 프롬프트<br className="sm:hidden" /> 마켓플레이스
+          </h1>
+          <p className="text-white/85 text-base sm:text-lg leading-relaxed">
+            검증된 AI 프롬프트를 NFT로 소유하고, 실행 권한을 블록체인으로 안전하게 거래하세요.
+          </p>
+          <div className="flex items-center gap-4 mt-5">
+            <div className="flex items-center gap-1.5 text-white/70 text-sm">
+              <ShoppingBag className="w-4 h-4" />
+              <span>{nfts.length}개 프롬프트</span>
+            </div>
+          </div>
+        </div>
+        <Sparkles className="absolute top-6 right-8 w-16 h-16 text-white/15 hidden sm:block" />
+        <Sparkles className="absolute bottom-8 right-24 w-8 h-8 text-white/10 hidden sm:block" />
       </div>
 
       {/* Search Bar */}
@@ -107,8 +124,11 @@ export function Market() {
       </div>
 
       {!isConnected && (
-        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 text-center">
-          <p className="text-orange-900 font-medium">
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200/60 rounded-2xl p-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-5 h-5 text-orange-500" />
+          </div>
+          <p className="text-orange-800 text-sm font-medium">
             NFT를 구매하려면 MetaMask 지갑을 연결해주세요
           </p>
         </div>
@@ -127,8 +147,16 @@ export function Market() {
       </div>
 
       {filteredNFTs.length === 0 && (
-        <div className="text-center py-16 text-gray-500">
-          {searchQuery ? '검색 결과가 없습니다' : '현재 마켓에 등록된 NFT가 없습니다'}
+        <div className="text-center py-20">
+          <div className="w-16 h-16 mx-auto mb-4 bg-orange-50 rounded-2xl flex items-center justify-center">
+            <Search className="w-8 h-8 text-orange-300" />
+          </div>
+          <p className="text-gray-500 font-medium">
+            {searchQuery ? '검색 결과가 없습니다' : '현재 마켓에 등록된 NFT가 없습니다'}
+          </p>
+          <p className="text-gray-400 text-sm mt-1">
+            {searchQuery ? '다른 키워드로 검색해보세요' : '첫 번째 프롬프트를 등록해보세요!'}
+          </p>
         </div>
       )}
     </div>

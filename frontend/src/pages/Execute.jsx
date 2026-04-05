@@ -118,7 +118,7 @@ export function Execute() {
         <Button
           onClick={handleExecute}
           disabled={isExecuting}
-          className="w-full bg-gradient-to-r from-orange-400 to-orange-300 hover:from-orange-500 hover:to-orange-400 text-white py-6 text-base font-medium shadow-sm"
+          className="w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white py-6 text-base font-medium shadow-md shadow-orange-200/40 hover:shadow-lg hover:shadow-orange-300/40 transition-all"
         >
           {isExecuting ? (
             <>

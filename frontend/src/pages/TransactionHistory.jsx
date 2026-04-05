@@ -195,7 +195,7 @@ export function TransactionHistory() {
                 onClick={() => setFilterType(key)}
                 className={
                   filterType === key
-                    ? 'bg-gradient-to-r from-orange-400 to-orange-300 text-white'
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white'
                     : 'border-orange-200 text-gray-600 hover:bg-orange-50'
                 }
               >
