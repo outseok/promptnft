@@ -3,171 +3,59 @@
 <head>
   <title>MetaMask 연결 테스트</title>
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; }
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
     button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #f97316; color: white; border: none; border-radius: 8px; margin: 4px; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    button.gray { background: #666; }
-    button.blue { background: #3b82f6; }
-    pre { background: #f5f5f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; max-height: 500px; overflow-y: auto; }
-    .ok { color: green; font-weight: bold; } .err { color: red; } .info { color: #666; } .warn { color: #d97706; font-weight: bold; }
-    .guide { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px; margin: 16px 0; }
-    .guide h3 { margin: 0 0 8px; } .guide ol { margin: 0; padding-left: 20px; }
+    button:disabled { opacity: 0.5; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; max-height: 400px; overflow-y: auto; }
+    .ok { color: green; } .err { color: red; } .info { color: #666; }
   </style>
 </head>
 <body>
-  <h2>MetaMask 연결 테스트 v3</h2>
-  <div>
-    <button id="btn" onclick="safeConnect()">지갑 연결</button>
-    <button class="gray" onclick="clearLog()">로그 초기화</button>
-  </div>
+  <h2>MetaMask 연결 테스트</h2>
+  <button id="btn" onclick="doConnect()">지갑 연결</button>
   <pre id="log"></pre>
-
-  <div class="guide" id="manual-guide" style="display:none">
-    <h3>⚠️ MetaMask가 응답하지 않습니다</h3>
-    <p>아래 순서대로 시도하세요:</p>
-    <ol>
-      <li><strong>Chrome 완전 종료</strong> 후 다시 열기 (Ctrl+Shift+Q)</li>
-      <li>MetaMask 아이콘 클릭 → 잠금 해제</li>
-      <li>이 페이지 다시 열고 "지갑 연결" 클릭</li>
-    </ol>
-    <p>그래도 안 되면:</p>
-    <ol>
-      <li>MetaMask 아이콘 클릭 → 우측 상단 ⋮ 메뉴</li>
-      <li>"연결된 사이트" 또는 "Connected sites" 클릭</li>
-      <li>"사이트 수동 연결" 또는 "Manually connect" 클릭</li>
-      <li>현재 사이트(localhost) 선택 → 연결</li>
-      <li>이 페이지 새로고침</li>
-    </ol>
-  </div>
 
   <script>
     const logEl = document.getElementById('log');
     const btn = document.getElementById('btn');
-    const guide = document.getElementById('manual-guide');
-    let busy = false;
 
-    function log(msg, type = 'info') {
-      const time = new Date().toLocaleTimeString();
-      logEl.innerHTML += `<span class="${type}">[${time}] ${msg}</span>\n`;
+    function log(msg, cls = 'info') {
+      logEl.innerHTML += `<span class="${cls}">${msg}</span>\n`;
       logEl.scrollTop = logEl.scrollHeight;
     }
-    function clearLog() { logEl.innerHTML = ''; guide.style.display = 'none'; }
 
-    // 타임아웃 래퍼 — 모든 ethereum 요청에 적용
-    function ethRequest(method, params, timeoutMs = 8000) {
-      return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          reject(new Error(`MetaMask 무응답 (${method}, ${timeoutMs}ms 초과)`));
-        }, timeoutMs);
-
-        window.ethereum.request({ method, ...(params ? { params } : {}) })
-          .then(result => { clearTimeout(timer); resolve(result); })
-          .catch(err => { clearTimeout(timer); reject(err); });
-      });
-    }
-
-    // 초기 상태 체크
+    // 초기 체크
     if (window.ethereum) {
-      log('✅ window.ethereum 감지됨 (isMetaMask: ' + window.ethereum.isMetaMask + ')', 'ok');
-
-      // passive 체크에도 타임아웃
-      ethRequest('eth_accounts', null, 3000)
-        .then(accounts => {
-          if (accounts.length > 0) {
-            log('✅ 이미 연결된 계정: ' + accounts[0], 'ok');
-          } else {
-            log('기존 연결 없음 — "지갑 연결" 버튼을 클릭하세요', 'info');
-          }
+      log('✅ window.ethereum 감지 (isMetaMask: ' + window.ethereum.isMetaMask + ')', 'ok');
+      window.ethereum.request({ method: 'eth_accounts' })
+        .then(a => {
+          if (a.length > 0) log('✅ 이미 연결됨: ' + a[0], 'ok');
+          else log('연결된 계정 없음 — 버튼을 클릭하세요');
         })
-        .catch(e => {
-          log('⚠️ eth_accounts 무응답 — MetaMask 상태 이상. Chrome 재시작 필요', 'warn');
-          guide.style.display = 'block';
-        });
+        .catch(e => log('eth_accounts 오류: ' + e.message, 'err'));
     } else {
       log('❌ MetaMask 미설치', 'err');
       btn.disabled = true;
     }
 
-    async function safeConnect() {
-      if (busy) { log('이미 연결 시도 중...', 'warn'); return; }
-      busy = true;
+    async function doConnect() {
+      if (btn.disabled) return;
       btn.disabled = true;
       btn.textContent = '연결 중...';
-
+      log('--- eth_requestAccounts 호출 ---');
       try {
-        await doConnect();
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          log('✅ 연결 성공: ' + accounts[0], 'ok');
+        } else {
+          log('계정 없음', 'err');
+        }
+      } catch (e) {
+        log('❌ 연결 실패: ' + (e.message || e), 'err');
       } finally {
-        busy = false;
-        if (btn.textContent === '연결 중...') {
-          btn.textContent = '지갑 연결';
-        }
         btn.disabled = false;
+        btn.textContent = '지갑 연결';
       }
-    }
-
-    async function doConnect() {
-      log('─── 연결 시도 시작 ───');
-
-      // 1. 이미 연결된 계정?
-      try {
-        log('1) eth_accounts 확인...');
-        const existing = await ethRequest('eth_accounts', null, 5000);
-        log('   결과: ' + JSON.stringify(existing));
-        if (existing.length > 0) {
-          onConnected(existing[0]);
-          return;
-        }
-      } catch (e) {
-        log('   ⚠️ ' + e.message, 'warn');
-        guide.style.display = 'block';
-        return; // MetaMask 무응답이면 여기서 중단
-      }
-
-      // 2. wallet_requestPermissions
-      try {
-        log('2) wallet_requestPermissions 호출...');
-        await ethRequest('wallet_requestPermissions', [{ eth_accounts: {} }], 30000);
-        const accts = await ethRequest('eth_accounts', null, 5000);
-        if (accts.length > 0) {
-          onConnected(accts[0]);
-          return;
-        }
-        log('   권한 승인됐지만 계정 없음', 'warn');
-      } catch (e) {
-        log('   ' + e.message, e.code === 4001 ? 'warn' : 'err');
-        if (e.code === 4001) {
-          log('   사용자가 거부했습니다', 'warn');
-          return;
-        }
-        if (e.message.includes('무응답')) {
-          guide.style.display = 'block';
-          return;
-        }
-      }
-
-      // 3. eth_requestAccounts 폴백
-      try {
-        log('3) eth_requestAccounts 폴백...');
-        const accts2 = await ethRequest('eth_requestAccounts', null, 30000);
-        if (accts2.length > 0) {
-          onConnected(accts2[0]);
-          return;
-        }
-      } catch (e) {
-        log('   ' + e.message, 'err');
-      }
-
-      log('❌ 모든 방법 실패', 'err');
-      guide.style.display = 'block';
-    }
-
-    async function onConnected(addr) {
-      log('✅ 연결 성공: ' + addr, 'ok');
-      btn.textContent = '✅ ' + addr.slice(0, 10) + '...';
-      try {
-        const chainId = await ethRequest('eth_chainId', null, 3000);
-        log('   체인: ' + chainId + ' (' + parseInt(chainId, 16) + ')', 'info');
-      } catch {}
     }
   </script>
 </body>
