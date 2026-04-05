@@ -38,8 +38,13 @@ export function useWallet() {
     }
     try {
       setLoading(true);
+      // wallet_requestPermissions → 계정 선택 팝업 표시
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
       const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
+        method: "eth_accounts",
       });
       const addr = accounts[0] || "";
       setAccount(addr);
@@ -47,19 +52,30 @@ export function useWallet() {
       setError(null);
       return addr;
     } catch (err) {
-      setError("지갑 연결 실패");
-      console.error(err);
+      if (err.code === 4001) {
+        setError("사용자가 연결을 거부했습니다");
+      } else {
+        setError("지갑 연결 실패");
+        console.error(err);
+      }
       return "";
     } finally {
       setLoading(false);
     }
   }, [refreshProviderSigner]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
     setAccount("");
     setProvider(null);
     setSigner(null);
     setChainId(null);
+    // MetaMask 권한 해제 → 재연결 시 계정 선택 가능
+    try {
+      await window.ethereum?.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    } catch {}
   }, []);
 
   const signMessage = useCallback(async () => {
