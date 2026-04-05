@@ -1,77 +1,172 @@
-// src/api.js - 백엔드 API 클라이언트
-// 담당: 홍재창 (프론트엔드)
+// api.js — 백엔드 API 래퍼 (새 UI 시스템용)
 
-import axios from "axios";
+let _walletAddress = '';
 
-const API_BASE = "/api";
+export function setWalletHeader(addr) {
+  _walletAddress = (addr || '').toLowerCase();
+}
 
-const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 0,
-});
+function getWallet() {
+  return _walletAddress;
+}
 
-// 지갑 주소 헤더 자동 추가
-export function setWalletHeader(address) {
-  if (address) {
-    api.defaults.headers.common["x-wallet-address"] = address;
-  } else {
-    delete api.defaults.headers.common["x-wallet-address"];
+async function parseResponse(res) {
+  const text = await res.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
+  if (!res.ok) {
+    throw new Error(data.error || data.message || '요청 실패');
+  }
+  return data;
+}
+
+// ── NFT 목록 ──────────────────────────────
+export async function getNFTs(onlySale = false) {
+  const url = onlySale ? '/api/nfts?sale=1' : '/api/nfts';
+  return parseResponse(await fetch(url));
+}
+
+// ── NFT 상세 ──────────────────────────────
+export async function getNFTDetail(tokenId) {
+  return parseResponse(await fetch(`/api/nfts/${tokenId}`));
+}
+
+// ── 내 NFT ────────────────────────────────
+export async function getMyNFTs() {
+  return parseResponse(
+    await fetch('/api/my-nfts', {
+      headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}
+
+// ── 구매 ──────────────────────────────────
+export async function buyNFT(payload) {
+  return parseResponse(
+    await fetch('/api/buy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': payload.buyer_address || getWallet(),
+      },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
+// ── 프롬프트 암호화 ──────────────────────
+export async function encryptPrompt(payload) {
+  return parseResponse(
+    await fetch('/api/encrypt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': payload.walletAddress || getWallet(),
+      },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
+// ── 민팅 DB 저장 ─────────────────────────
+export async function mintNFT(payload) {
+  return parseResponse(
+    await fetch('/api/mint', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': payload.creator_address || getWallet(),
+      },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
+// ── 판매 상태 변경 ───────────────────────
+export async function updateSaleStatus(tokenId, payload) {
+  return parseResponse(
+    await fetch(`/api/nfts/${tokenId}/sale`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': getWallet(),
+      },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
+// ── AI 실행 ──────────────────────────────
+export async function executePrompt(body, headers = {}) {
+  return parseResponse(
+    await fetch('/api/execute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    })
+  );
+}
+
+// ── Nonce 발급 ───────────────────────────
+export async function getNonce(wallet) {
+  return parseResponse(
+    await fetch(`/api/nonce?wallet=${encodeURIComponent(wallet)}`)
+  );
+}
+
+// ── 관리자 확인 ──────────────────────────
+export async function checkAdmin() {
+  try {
+    return await parseResponse(
+      await fetch('/api/admin/check', {
+        headers: { 'x-wallet-address': getWallet() },
+      })
+    );
+  } catch {
+    return { isAdmin: false };
   }
 }
 
-// ── NFT 목록 ──
-export const getNFTs = (saleOnly = false) =>
-  api.get(`/nfts${saleOnly ? "?sale=1" : ""}`).then((r) => r.data);
+// ── 관리자: NFT 삭제 ────────────────────
+export async function adminDeleteNFT(tokenId) {
+  return parseResponse(
+    await fetch(`/api/admin/nfts/${tokenId}`, {
+      method: 'DELETE',
+      headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}
 
-export const getNFTDetail = (tokenId) =>
-  api.get(`/nfts/${tokenId}`).then((r) => r.data);
+// ── 관리자: 판매 강제 중지 ──────────────
+export async function adminForceDelist(tokenId) {
+  return parseResponse(
+    await fetch(`/api/admin/nfts/${tokenId}/force-delist`, {
+      method: 'PATCH',
+      headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}
 
-export const getMyNFTs = () =>
-  api.get("/my-nfts").then((r) => r.data);
+// ── DB 조회 (관리자) ────────────────────
+export async function getDBTables() {
+  return parseResponse(
+    await fetch('/api/admin/db/tables', {
+      headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}
 
-// ── 민팅 ──
-export const mintNFT = (data) =>
-  api.post("/mint", data).then((r) => r.data);
-
-// ── 구매 ──
-export const buyNFT = (data) =>
-  api.post("/buy", data).then((r) => r.data);
-
-// ── 판매 상태 변경 ──
-export const updateSaleStatus = (tokenId, data) =>
-  api.patch(`/nfts/${tokenId}/sale`, data).then((r) => r.data);
-
-// ── Nonce 발급 ──
-export const getNonce = (wallet) =>
-  api.get(`/nonce?wallet=${wallet}`).then((r) => r.data);
-
-// ── 프롬프트 암호화 저장 ──
-export const encryptPrompt = (data) =>
-  api.post("/encrypt", data).then((r) => r.data);
-
-// ── 프롬프트 실행 (서명 필요) ──
-export const executePrompt = (data, headers = {}) =>
-  api.post("/execute", data, { headers }).then((r) => r.data);
-
-// ── 실행 기록 조회 ──
-export const getExecutions = (tokenId) =>
-  api.get(`/nfts/${tokenId}/executions`).then((r) => r.data);
-
-// ── 관리자 API ──
-export const checkAdmin = () =>
-  api.get("/admin/check").then((r) => r.data);
-
-export const adminDeleteNFT = (tokenId) =>
-  api.delete(`/admin/nfts/${tokenId}`).then((r) => r.data);
-
-export const adminForceDelist = (tokenId) =>
-  api.patch(`/admin/nfts/${tokenId}/force-delist`).then((r) => r.data);
-
-// ── DB 조회 (관리자) ──
-export const getDBTables = () =>
-  api.get("/admin/db/tables").then((r) => r.data);
-
-export const getDBTableData = (tableName) =>
-  api.get(`/admin/db/tables/${tableName}`).then((r) => r.data);
-
-export default api;
+export async function getDBTableData(tableName) {
+  return parseResponse(
+    await fetch(`/api/admin/db/tables/${encodeURIComponent(tableName)}`, {
+      headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}

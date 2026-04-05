@@ -1,160 +1,134 @@
-// src/hooks/useWallet.js - MetaMask 지갑 연결 훅
-// 담당: 홍재창 (프론트엔드)
+import { useEffect, useState, useCallback } from "react";
+import { ethers } from "ethers";
+import { getNonce } from "../api";
 
-import { useState, useCallback, useEffect } from "react";
-import { BrowserProvider } from "ethers";
-import { setWalletHeader, getNonce } from "../api";
-
-// MetaMask provider를 직접 찾는 함수 (다른 지갑 확장 프록시 우회)
-function getMetaMaskProvider() {
-  // 1) providers 배열이 있으면 MetaMask를 직접 찾기
-  if (window.ethereum?.providers?.length) {
-    const mm = window.ethereum.providers.find((p) => p.isMetaMask);
-    if (mm) {
-      console.log("[useWallet] providers 배열에서 MetaMask 발견");
-      return mm;
-    }
-  }
-  // 2) window.ethereum 자체가 MetaMask인 경우
-  if (window.ethereum?.isMetaMask) {
-    console.log("[useWallet] window.ethereum이 MetaMask");
-    return window.ethereum;
-  }
-  // 3) providerMap이 있는 경우 (일부 프록시 구조)
-  if (window.ethereum?.providerMap) {
-    const mm = window.ethereum.providerMap.get("MetaMask");
-    if (mm) {
-      console.log("[useWallet] providerMap에서 MetaMask 발견");
-      return mm;
-    }
-  }
-  return null;
-}
-
+// named export — WalletContext에서 { useWallet } 로 import
 export function useWallet() {
-  const [account, setAccount] = useState(null);
+  const [account, setAccount] = useState("");
   const [provider, setProvider] = useState(null);
   const [signer, setSigner] = useState(null);
   const [chainId, setChainId] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // MetaMask 연결
-  const connect = useCallback(async () => {
-    console.log("[useWallet] connect 호출됨");
+  const isConnected = Boolean(account);
 
-    const ethereum = getMetaMaskProvider();
-
-    if (!ethereum) {
-      const msg = "MetaMask가 설치되어 있지 않습니다. 크롬 확장 프로그램에서 MetaMask를 설치해주세요.";
-      setError(msg);
-      alert(msg);
+  // provider/signer 갱신
+  const refreshProviderSigner = useCallback(async (addr) => {
+    if (!window.ethereum || !addr) {
+      setProvider(null);
+      setSigner(null);
       return;
     }
-
-    setLoading(true);
-    setError(null);
-
     try {
-      console.log("[useWallet] eth_requestAccounts 요청 중...");
-      const accounts = await ethereum.request({
+      const bp = new ethers.BrowserProvider(window.ethereum);
+      setProvider(bp);
+      const s = await bp.getSigner();
+      setSigner(s);
+      const network = await bp.getNetwork();
+      setChainId(Number(network.chainId));
+    } catch {
+      setProvider(null);
+      setSigner(null);
+    }
+  }, []);
+
+  // 연결
+  const connect = useCallback(async () => {
+    if (!window.ethereum) {
+      setError("MetaMask가 필요합니다.");
+      return "";
+    }
+    try {
+      setLoading(true);
+      const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      console.log("[useWallet] 계정:", accounts);
-
-      const prov = new BrowserProvider(ethereum);
-      const s = await prov.getSigner();
-      const network = await prov.getNetwork();
-
-      setProvider(prov);
-      setSigner(s);
-      setAccount(accounts[0]);
-      setChainId(Number(network.chainId));
-      setWalletHeader(accounts[0]);
-      console.log("[useWallet] 연결 성공:", accounts[0]);
+      const addr = accounts[0] || "";
+      setAccount(addr);
+      await refreshProviderSigner(addr);
+      setError(null);
+      return addr;
     } catch (err) {
-      console.error("[useWallet] 연결 실패:", err);
-      setError("지갑 연결 실패: " + err.message);
+      setError("지갑 연결 실패");
+      console.error(err);
+      return "";
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshProviderSigner]);
 
-  // 연결 해제 — MetaMask 권한도 해제하여 다음 connect 시 계정 선택 팝업 표시
-  const disconnect = useCallback(async () => {
-    try {
-      const ethereum = getMetaMaskProvider();
-      if (ethereum) {
-        // wallet_revokePermissions로 MetaMask 연결 자체를 해제
-        await ethereum.request({
-          method: "wallet_revokePermissions",
-          params: [{ eth_accounts: {} }],
-        });
-        console.log("[useWallet] MetaMask 권한 해제 완료");
-      }
-    } catch (err) {
-      console.log("[useWallet] 권한 해제 실패 (무시):", err.message);
-    }
-
-    setAccount(null);
+  // 연결 해제
+  const disconnect = useCallback(() => {
+    setAccount("");
     setProvider(null);
     setSigner(null);
     setChainId(null);
-    setWalletHeader(null);
   }, []);
 
-  // 서명 생성 (nonce 기반)
+  // 서명 (nonce 기반)
   const signMessage = useCallback(async () => {
-    if (!signer || !account) {
+    if (!window.ethereum || !account) {
       throw new Error("지갑이 연결되지 않았습니다");
     }
-
-    // 1. 서버에서 nonce 받기
     const { nonce, message } = await getNonce(account);
+    const bp = new ethers.BrowserProvider(window.ethereum);
+    const s = await bp.getSigner();
+    const signature = await s.signMessage(message);
+    return { nonce, signature };
+  }, [account]);
 
-    // 2. MetaMask로 서명
-    const signature = await signer.signMessage(message);
-
-    return { nonce, signature, wallet: account };
-  }, [signer, account]);
-
-  // 계정 변경 감지
+  // 초기 로드 + 이벤트 리스너
   useEffect(() => {
-    const ethereum = getMetaMaskProvider();
-    if (!ethereum) return;
+    if (!window.ethereum) {
+      setLoading(false);
+      return;
+    }
 
     const handleAccountsChanged = (accounts) => {
-      if (accounts.length === 0) {
-        disconnect();
-      } else {
-        setAccount(accounts[0]);
-        setWalletHeader(accounts[0]);
-      }
+      const addr = accounts.length > 0 ? accounts[0] : "";
+      setAccount(addr);
+      refreshProviderSigner(addr);
     };
 
     const handleChainChanged = () => {
       window.location.reload();
     };
 
-    ethereum.on("accountsChanged", handleAccountsChanged);
-    ethereum.on("chainChanged", handleChainChanged);
+    window.ethereum
+      .request({ method: "eth_accounts" })
+      .then(async (accounts) => {
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+          await refreshProviderSigner(accounts[0]);
+        }
+      })
+      .finally(() => setLoading(false));
+
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
 
     return () => {
-      ethereum.removeListener("accountsChanged", handleAccountsChanged);
-      ethereum.removeListener("chainChanged", handleChainChanged);
+      if (window.ethereum.removeListener) {
+        window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        window.ethereum.removeListener("chainChanged", handleChainChanged);
+      }
     };
-  }, [disconnect]);
+  }, [refreshProviderSigner]);
 
   return {
     account,
+    isConnected,
+    connect,
+    disconnect,
     provider,
     signer,
     chainId,
     loading,
     error,
-    connect,
-    disconnect,
     signMessage,
-    isConnected: !!account,
   };
 }
+
+// default export도 유지 (기존 import 호환)
+export default useWallet;

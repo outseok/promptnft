@@ -1,11 +1,11 @@
-// src/contract.js - 스마트 컨트랙트 연동 (MetaMask 기반 — 프라이빗 키 불필요)
-import { Contract, ContractFactory, parseEther } from "ethers";
-import ABI from "./abi.json";
-import { bytecode } from "./bytecode.json";
+// contract.js — 온체인 컨트랙트 헬퍼 (ethers v6)
+import { Contract, ContractFactory, parseEther } from 'ethers';
+import ABI from './abi/PromptNFT.json';
+import { bytecode } from './bytecode.json';
 
 // 컨트랙트 주소 — localStorage에 저장/불러오기
-const STORAGE_KEY = "promptnft_contract_address";
-const DEFAULT_ADDRESS = "0x4187Cf6910659B75D9e90072304A5721A3Ef0E5b";
+const STORAGE_KEY = 'promptnft_contract_address';
+const DEFAULT_ADDRESS = '0x4187Cf6910659B75D9e90072304A5721A3Ef0E5b';
 
 export function getContractAddress() {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_ADDRESS;
@@ -16,28 +16,23 @@ export function setContractAddress(address) {
 }
 
 // 읽기 전용 컨트랙트
-export function getReadContract(provider) {
+function getReadContract(provider) {
   return new Contract(getContractAddress(), ABI, provider);
 }
 
 // 쓰기 가능 컨트랙트
-export function getWriteContract(signer) {
+function getWriteContract(signer) {
   return new Contract(getContractAddress(), ABI, signer);
 }
 
-// ── MetaMask로 컨트랙트 배포 (프라이빗 키 불필요) ──
+// ── MetaMask로 컨트랙트 배포 ──
 export async function deployContract(signer) {
   const factory = new ContractFactory(ABI, bytecode, signer);
   const signerAddress = await signer.getAddress();
-
-  // constructor(address royaltyReceiver) — 배포자가 로열티 수신자
   const contract = await factory.deploy(signerAddress);
   const deployed = await contract.waitForDeployment();
   const address = await deployed.getAddress();
-
-  // 주소 저장
   setContractAddress(address);
-
   return address;
 }
 
@@ -52,17 +47,16 @@ export async function checkOwnership(provider, tokenId, wallet) {
   }
 }
 
-// 온체인 민팅 — 누구나 가능 (msg.sender에게 발행) + 사용 횟수 설정
+// 온체인 민팅 — mint(tokenURI, usageLimit)
 export async function onChainMint(signer, tokenURI, usageLimit = 50) {
   const contract = getWriteContract(signer);
   const tx = await contract.mint(tokenURI, usageLimit);
   const receipt = await tx.wait();
 
-  // Minted 이벤트에서 tokenId 추출
   const mintedEvent = receipt.logs.find((log) => {
     try {
       const parsed = contract.interface.parseLog(log);
-      return parsed?.name === "Minted";
+      return parsed?.name === 'Minted';
     } catch {
       return false;
     }
@@ -72,11 +66,10 @@ export async function onChainMint(signer, tokenURI, usageLimit = 50) {
     const parsed = contract.interface.parseLog(mintedEvent);
     return { tokenId: Number(parsed.args.tokenId), txHash: receipt.hash };
   }
-
   return { tokenId: null, txHash: receipt.hash };
 }
 
-// ── 거래 시 민팅 (Lazy Mint + Buy) — 구매자가 호출 ──
+// ── Lazy Mint + Buy — 구매자가 호출 ──
 export async function onChainLazyMintAndBuy(signer, tokenURI, creatorAddress, usageLimit, priceEth) {
   const contract = getWriteContract(signer);
   const tx = await contract.lazyMintAndBuy(tokenURI, creatorAddress, usageLimit, {
@@ -84,11 +77,10 @@ export async function onChainLazyMintAndBuy(signer, tokenURI, creatorAddress, us
   });
   const receipt = await tx.wait();
 
-  // LazyMinted 이벤트에서 tokenId 추출
   const event = receipt.logs.find((log) => {
     try {
       const parsed = contract.interface.parseLog(log);
-      return parsed?.name === "LazyMinted";
+      return parsed?.name === 'LazyMinted';
     } catch {
       return false;
     }
@@ -98,11 +90,10 @@ export async function onChainLazyMintAndBuy(signer, tokenURI, creatorAddress, us
     const parsed = contract.interface.parseLog(event);
     return { tokenId: Number(parsed.args.tokenId), txHash: receipt.hash };
   }
-
   return { tokenId: null, txHash: receipt.hash };
 }
 
-// ── 사용 기록 (on-chain) — Etherscan에 영구 기록 ──
+// ── 사용 기록 (on-chain) ──
 export async function onChainRecordUsage(signer, tokenId) {
   const contract = getWriteContract(signer);
   const tx = await contract.recordUsage(tokenId);
