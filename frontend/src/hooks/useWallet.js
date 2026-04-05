@@ -23,11 +23,13 @@ export function useWallet() {
     try {
       const bp = new ethers.BrowserProvider(window.ethereum);
       setProvider(bp);
-      const s = await bp.getSigner();
+      // 반드시 addr를 전달 — getSigner() 호출 시 eth_requestAccounts 재호출 방지
+      const s = await bp.getSigner(addr);
       setSigner(s);
       const network = await bp.getNetwork();
       setChainId(Number(network.chainId));
-    } catch {
+    } catch (e) {
+      console.error("refreshProviderSigner failed:", e);
       setProvider(null);
       setSigner(null);
     }
@@ -73,7 +75,7 @@ export function useWallet() {
     }
     const { nonce, message } = await getNonce(account);
     const bp = new ethers.BrowserProvider(window.ethereum);
-    const s = await bp.getSigner();
+    const s = await bp.getSigner(account);
     const signature = await s.signMessage(message);
     return { nonce, signature };
   }, [account]);
