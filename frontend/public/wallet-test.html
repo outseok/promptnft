@@ -14,6 +14,7 @@
   <h2>MetaMask 연결 테스트</h2>
   <p>이 페이지는 React/ethers 없이 순수 JavaScript로 MetaMask 연결만 테스트합니다.</p>
   <button id="btn" onclick="testConnect()">지갑 연결 테스트</button>
+  <button onclick="resetAndRetry()" style="background:#666;margin-left:8px;">초기화 후 재시도</button>
   <pre id="log"></pre>
 
   <script>
@@ -56,47 +57,80 @@
       btn.textContent = '연결 중...';
       log('--- 연결 시도 시작 ---');
 
+      // 이미 연결된 계정 확인
       try {
-        // 1단계: wallet_requestPermissions (최신 MetaMask 필수)
-        log('wallet_requestPermissions 호출...');
+        const existing = await window.ethereum.request({ method: 'eth_accounts' });
+        log('eth_accounts 결과: ' + JSON.stringify(existing));
+        if (existing.length > 0) {
+          log('✅ 이미 연결됨: ' + existing[0], 'ok');
+          btn.textContent = '✅ ' + existing[0].slice(0, 10) + '...';
+          return;
+        }
+      } catch(e) {
+        log('eth_accounts 실패: ' + e.message, 'err');
+      }
+
+      // 방법 1: wallet_requestPermissions
+      log('wallet_requestPermissions 시도...');
+      try {
+        const perm = await Promise.race([
+          window.ethereum.request({
+            method: 'wallet_requestPermissions',
+            params: [{ eth_accounts: {} }]
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), 10000))
+        ]);
+        log('✅ 권한 승인: ' + JSON.stringify(perm), 'ok');
+        const a = await window.ethereum.request({ method: 'eth_accounts' });
+        if (a.length > 0) {
+          log('✅ 연결 성공: ' + a[0], 'ok');
+          btn.textContent = '✅ ' + a[0].slice(0, 10) + '...';
+          return;
+        }
+      } catch (e) {
+        log('wallet_requestPermissions: ' + e.message, 'err');
+        if (e.code === 4001) {
+          btn.textContent = '거부됨 — 다시 시도';
+          btn.disabled = false;
+          return;
+        }
+      }
+
+      // 방법 2: eth_requestAccounts
+      log('eth_requestAccounts 시도...');
+      try {
+        const a2 = await Promise.race([
+          window.ethereum.request({ method: 'eth_requestAccounts' }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), 10000))
+        ]);
+        if (a2.length > 0) {
+          log('✅ 연결 성공: ' + a2[0], 'ok');
+          btn.textContent = '✅ ' + a2[0].slice(0, 10) + '...';
+          return;
+        }
+      } catch (e) {
+        log('eth_requestAccounts: ' + e.message, 'err');
+      }
+
+      log('⚠️ 두 방법 모두 실패. MetaMask 확장 프로그램을 직접 열어서 이 사이트(localhost)에 계정을 수동 연결해보세요.', 'err');
+      btn.textContent = '다시 시도';
+      btn.disabled = false;
+    }
+
+    async function resetAndRetry() {
+      log('--- 초기화 시도 ---');
+      try {
+        // wallet_revokePermissions로 기존 권한 초기화
         await window.ethereum.request({
-          method: 'wallet_requestPermissions',
+          method: 'wallet_revokePermissions',
           params: [{ eth_accounts: {} }]
         });
-        log('✅ 권한 승인됨!', 'ok');
-
-        // 2단계: 계정 조회
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        log('✅ 계정 수신: ' + JSON.stringify(accounts), 'ok');
-
-        if (accounts[0]) {
-          log('연결된 주소: ' + accounts[0], 'ok');
-          const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-          log('체인 ID: ' + chainId + ' (' + parseInt(chainId, 16) + ')', 'info');
-          btn.textContent = '✅ 연결됨: ' + accounts[0].slice(0, 8) + '...';
-          log('--- 연결 성공! ---', 'ok');
-        }
-      } catch (err) {
-        log('❌ wallet_requestPermissions 실패: code=' + err.code + ' msg=' + err.message, 'err');
-
-        // 폴백: eth_requestAccounts
-        if (err.code !== 4001) {
-          log('eth_requestAccounts로 폴백 시도...');
-          try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            log('✅ 폴백 성공: ' + JSON.stringify(accounts), 'ok');
-            if (accounts[0]) {
-              btn.textContent = '✅ 연결됨: ' + accounts[0].slice(0, 8) + '...';
-              log('--- 연결 성공 (폴백)! ---', 'ok');
-              return;
-            }
-          } catch (e2) {
-            log('❌ 폴백도 실패: ' + e2.message, 'err');
-          }
-        }
-        btn.textContent = '다시 시도';
-        btn.disabled = false;
+        log('✅ 기존 권한 초기화됨', 'ok');
+      } catch(e) {
+        log('권한 초기화 실패 (무시): ' + e.message, 'info');
       }
+      log('2초 후 연결 재시도...');
+      setTimeout(() => testConnect(), 2000);
     }
   </script>
 </body>

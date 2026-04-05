@@ -13,7 +13,7 @@ export function useWallet() {
 
   const isConnected = Boolean(account);
 
-  // account 변경 시 provider/signer 백그라운드 세팅
+  // account 변경 → provider/signer 세팅
   useEffect(() => {
     if (!account || !window.ethereum) {
       setProvider(null);
@@ -21,27 +21,20 @@ export function useWallet() {
       setChainId(null);
       return;
     }
-
     let cancelled = false;
-
     (async () => {
       try {
         const bp = new ethers.BrowserProvider(window.ethereum);
-        // getSigner(addr)를 5초 타임아웃으로 감싸기
-        const signerPromise = bp.getSigner(account);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("getSigner timeout")), 5000)
-        );
-        const s = await Promise.race([signerPromise, timeoutPromise]);
         const network = await bp.getNetwork();
+        const s = await bp.getSigner(account);
         if (!cancelled) {
           setProvider(bp);
           setSigner(s);
           setChainId(Number(network.chainId));
         }
       } catch (e) {
-        console.warn("[useWallet] signer 세팅 실패 (무시):", e.message);
-        // signer 실패해도 account(연결 상태)는 유지
+        console.warn("[useWallet] signer setup failed:", e.message);
+        // provider만이라도 세팅
         try {
           const bp = new ethers.BrowserProvider(window.ethereum);
           const network = await bp.getNetwork();
@@ -52,11 +45,10 @@ export function useWallet() {
         } catch {}
       }
     })();
-
     return () => { cancelled = true; };
   }, [account]);
 
-  // 연결 — wallet_requestPermissions → eth_accounts 순서로 호출
+  // 연결
   async function connect() {
     if (!window.ethereum) {
       setError("MetaMask가 설치되어 있지 않습니다.");
@@ -64,53 +56,73 @@ export function useWallet() {
     }
     setLoading(true);
     setError(null);
+
+    // 이미 연결된 계정이 있으면 바로 사용
     try {
-      // 최신 MetaMask: wallet_requestPermissions로 연결 승인 팝업 생성
-      await window.ethereum.request({
-        method: "wallet_requestPermissions",
-        params: [{ eth_accounts: {} }],
-      });
-      // 승인 후 계정 조회
-      const accounts = await window.ethereum.request({
-        method: "eth_accounts",
-      });
-      const addr = (accounts[0] || "").toLowerCase();
-      if (!addr) {
-        setError("계정을 가져올 수 없습니다");
-        return "";
+      const existing = await window.ethereum.request({ method: "eth_accounts" });
+      if (existing.length > 0) {
+        const addr = existing[0].toLowerCase();
+        setAccount(addr);
+        setLoading(false);
+        return addr;
       }
-      setAccount(addr);
-      return addr;
+    } catch {}
+
+    // 연결 요청 (10초 타임아웃)
+    try {
+      const result = await Promise.race([
+        requestConnection(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("TIMEOUT")), 10000)
+        ),
+      ]);
+      if (result) {
+        setAccount(result);
+        return result;
+      }
+      setError("계정을 가져올 수 없습니다");
+      return "";
     } catch (err) {
-      // wallet_requestPermissions 실패 시 eth_requestAccounts 폴백
-      if (err.code !== 4001) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_requestAccounts",
-          });
-          const addr = (accounts[0] || "").toLowerCase();
-          if (addr) {
-            setAccount(addr);
-            return addr;
-          }
-        } catch (fallbackErr) {
-          if (fallbackErr.code === 4001) {
-            setError("사용자가 연결을 거부했습니다");
-          } else {
-            setError("지갑 연결 실패");
-          }
-          return "";
-        }
-      }
-      if (err.code === 4001) {
+      if (err.message === "TIMEOUT") {
+        setError("MetaMask 응답 시간 초과 — MetaMask 팝업을 확인하거나, 확장 프로그램을 직접 열어서 연결을 승인해주세요.");
+      } else if (err.code === 4001) {
         setError("사용자가 연결을 거부했습니다");
       } else {
-        setError("지갑 연결 실패");
+        setError("지갑 연결 실패: " + (err.message || ""));
       }
       return "";
     } finally {
       setLoading(false);
     }
+  }
+
+  // 실제 연결 요청 — 여러 방법 시도
+  async function requestConnection() {
+    // 방법 1: wallet_requestPermissions (최신 MetaMask)
+    try {
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+      const accounts = await window.ethereum.request({ method: "eth_accounts" });
+      if (accounts.length > 0) return accounts[0].toLowerCase();
+    } catch (e) {
+      // 사용자 거부면 바로 throw
+      if (e.code === 4001) throw e;
+      console.warn("[useWallet] wallet_requestPermissions failed, trying fallback");
+    }
+
+    // 방법 2: eth_requestAccounts (기존 방식)
+    try {
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      if (accounts.length > 0) return accounts[0].toLowerCase();
+    } catch (e) {
+      throw e;
+    }
+
+    return "";
   }
 
   function disconnect() {
@@ -128,12 +140,11 @@ export function useWallet() {
     return { nonce, signature };
   }
 
-  // 초기 로드 + 이벤트
+  // 초기 로드
   useEffect(() => {
     mountedRef.current = true;
     if (!window.ethereum) return;
 
-    // 이미 연결된 계정 확인 (팝업 없는 passive 호출)
     window.ethereum
       .request({ method: "eth_accounts" })
       .then((accounts) => {
@@ -147,7 +158,6 @@ export function useWallet() {
       if (!mountedRef.current) return;
       setAccount(accounts.length > 0 ? accounts[0].toLowerCase() : "");
     }
-
     function handleChainChanged() {
       window.location.reload();
     }

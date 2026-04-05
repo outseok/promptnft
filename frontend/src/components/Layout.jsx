@@ -157,8 +157,8 @@ function LayoutInner() {
 
         {/* Wallet error */}
         {error && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 bg-red-50 border-t border-red-100">
-            <p className="text-xs text-red-600">{error}</p>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 bg-red-50 border-t border-red-200">
+            <p className="text-sm text-red-700 font-medium">{error}</p>
           </div>
         )}
       </header>
