@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { ethers } from "ethers";
 import { getNonce } from "../api";
 
-// named export — WalletContext에서 { useWallet } 로 import
 export function useWallet() {
   const [account, setAccount] = useState("");
   const [provider, setProvider] = useState(null);
@@ -14,77 +13,75 @@ export function useWallet() {
 
   const isConnected = Boolean(account);
 
-  // provider/signer 세팅 — getSigner 사용하지 않고 직접 생성
-  const setupProviderSigner = useCallback(async (addr) => {
-    if (!window.ethereum || !addr) {
+  // account가 바뀌면 provider/signer를 별도로 세팅 (connect와 분리!)
+  useEffect(() => {
+    if (!account || !window.ethereum) {
       setProvider(null);
       setSigner(null);
+      setChainId(null);
       return;
     }
-    try {
-      const bp = new ethers.BrowserProvider(window.ethereum);
-      const network = await bp.getNetwork();
-      const s = new ethers.JsonRpcSigner(bp, addr);
-      if (mountedRef.current) {
-        setProvider(bp);
-        setSigner(s);
-        setChainId(Number(network.chainId));
-      }
-    } catch (e) {
-      console.error("setupProviderSigner failed:", e);
-      if (mountedRef.current) {
-        setProvider(null);
-        setSigner(null);
-      }
-    }
-  }, []);
 
-  // 연결
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const bp = new ethers.BrowserProvider(window.ethereum);
+        const network = await bp.getNetwork();
+        // getSigner를 쓰지 않고 직접 생성
+        const s = new ethers.JsonRpcSigner(bp, account);
+        if (!cancelled) {
+          setProvider(bp);
+          setSigner(s);
+          setChainId(Number(network.chainId));
+        }
+      } catch (e) {
+        console.error("[useWallet] provider/signer 세팅 실패:", e);
+        // provider/signer 실패해도 account는 유지 (연결은 된 상태)
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [account]);
+
+  // 연결 — eth_requestAccounts만 하고 끝. signer는 위 useEffect가 처리
   const connect = useCallback(async () => {
     if (!window.ethereum) {
       setError("MetaMask가 설치되어 있지 않습니다.");
       return "";
     }
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      console.log("[useWallet] eth_requestAccounts 요청...");
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      console.log("[useWallet] 계정 수신:", accounts);
-      const addr = accounts[0] || "";
+      const addr = (accounts[0] || "").toLowerCase();
       if (!addr) {
         setError("계정을 가져올 수 없습니다");
-        setLoading(false);
         return "";
       }
       setAccount(addr);
-      await setupProviderSigner(addr);
-      console.log("[useWallet] 연결 완료:", addr);
       return addr;
     } catch (err) {
-      console.error("[useWallet] 연결 실패:", err);
       if (err.code === 4001) {
         setError("사용자가 연결을 거부했습니다");
       } else {
-        setError("지갑 연결 실패: " + (err.shortMessage || err.message || ""));
+        setError("지갑 연결 실패");
       }
+      console.error("[useWallet] connect error:", err);
       return "";
     } finally {
       setLoading(false);
     }
-  }, [setupProviderSigner]);
+  }, []);
 
   // 연결 해제
   const disconnect = useCallback(() => {
     setAccount("");
-    setProvider(null);
-    setSigner(null);
-    setChainId(null);
   }, []);
 
-  // 서명 (nonce 기반)
+  // 서명
   const signMessage = useCallback(async () => {
     if (!window.ethereum || !account) {
       throw new Error("지갑이 연결되지 않았습니다");
@@ -96,53 +93,40 @@ export function useWallet() {
     return { nonce, signature };
   }, [account]);
 
-  // 초기 로드 + 이벤트 리스너
+  // 초기 로드 — 이미 연결된 계정 확인 + 이벤트 리스너
   useEffect(() => {
     mountedRef.current = true;
-
     if (!window.ethereum) return;
 
-    // 이미 연결된 계정 체크 (팝업 없이)
     window.ethereum
       .request({ method: "eth_accounts" })
-      .then(async (accounts) => {
+      .then((accounts) => {
         if (accounts.length > 0 && mountedRef.current) {
-          console.log("[useWallet] 기존 연결 감지:", accounts[0]);
-          setAccount(accounts[0]);
-          await setupProviderSigner(accounts[0]);
+          setAccount(accounts[0].toLowerCase());
         }
       })
-      .catch((e) => console.error("[useWallet] eth_accounts 실패:", e));
+      .catch(() => {});
 
     const handleAccountsChanged = (accounts) => {
       if (!mountedRef.current) return;
-      const addr = accounts.length > 0 ? accounts[0] : "";
-      console.log("[useWallet] 계정 변경:", addr);
-      setAccount(addr);
-      if (addr) {
-        setupProviderSigner(addr);
+      if (accounts.length > 0) {
+        setAccount(accounts[0].toLowerCase());
       } else {
-        setProvider(null);
-        setSigner(null);
-        setChainId(null);
+        setAccount("");
       }
     };
 
-    const handleChainChanged = () => {
-      window.location.reload();
-    };
+    const handleChainChanged = () => window.location.reload();
 
     window.ethereum.on("accountsChanged", handleAccountsChanged);
     window.ethereum.on("chainChanged", handleChainChanged);
 
     return () => {
       mountedRef.current = false;
-      if (window.ethereum.removeListener) {
-        window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
-        window.ethereum.removeListener("chainChanged", handleChainChanged);
-      }
+      window.ethereum.removeListener?.("accountsChanged", handleAccountsChanged);
+      window.ethereum.removeListener?.("chainChanged", handleChainChanged);
     };
-  }, [setupProviderSigner]);
+  }, []);
 
   return {
     account,
@@ -158,5 +142,4 @@ export function useWallet() {
   };
 }
 
-// default export도 유지 (기존 import 호환)
 export default useWallet;
