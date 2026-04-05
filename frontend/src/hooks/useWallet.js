@@ -56,7 +56,7 @@ export function useWallet() {
     return () => { cancelled = true; };
   }, [account]);
 
-  // 연결 — eth_requestAccounts만 호출, signer는 위 useEffect가 처리
+  // 연결 — wallet_requestPermissions → eth_accounts 순서로 호출
   async function connect() {
     if (!window.ethereum) {
       setError("MetaMask가 설치되어 있지 않습니다.");
@@ -65,8 +65,14 @@ export function useWallet() {
     setLoading(true);
     setError(null);
     try {
+      // 최신 MetaMask: wallet_requestPermissions로 연결 승인 팝업 생성
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+      // 승인 후 계정 조회
       const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
+        method: "eth_accounts",
       });
       const addr = (accounts[0] || "").toLowerCase();
       if (!addr) {
@@ -76,6 +82,26 @@ export function useWallet() {
       setAccount(addr);
       return addr;
     } catch (err) {
+      // wallet_requestPermissions 실패 시 eth_requestAccounts 폴백
+      if (err.code !== 4001) {
+        try {
+          const accounts = await window.ethereum.request({
+            method: "eth_requestAccounts",
+          });
+          const addr = (accounts[0] || "").toLowerCase();
+          if (addr) {
+            setAccount(addr);
+            return addr;
+          }
+        } catch (fallbackErr) {
+          if (fallbackErr.code === 4001) {
+            setError("사용자가 연결을 거부했습니다");
+          } else {
+            setError("지갑 연결 실패");
+          }
+          return "";
+        }
+      }
       if (err.code === 4001) {
         setError("사용자가 연결을 거부했습니다");
       } else {

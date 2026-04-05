@@ -55,33 +55,45 @@
       btn.disabled = true;
       btn.textContent = '연결 중...';
       log('--- 연결 시도 시작 ---');
-      log('eth_requestAccounts 호출...');
 
       try {
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts'
+        // 1단계: wallet_requestPermissions (최신 MetaMask 필수)
+        log('wallet_requestPermissions 호출...');
+        await window.ethereum.request({
+          method: 'wallet_requestPermissions',
+          params: [{ eth_accounts: {} }]
         });
+        log('✅ 권한 승인됨!', 'ok');
+
+        // 2단계: 계정 조회
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         log('✅ 계정 수신: ' + JSON.stringify(accounts), 'ok');
 
         if (accounts[0]) {
           log('연결된 주소: ' + accounts[0], 'ok');
-
-          // chainId 확인
           const chainId = await window.ethereum.request({ method: 'eth_chainId' });
           log('체인 ID: ' + chainId + ' (' + parseInt(chainId, 16) + ')', 'info');
-
-          // ethers 없이 잔액 확인
-          const balance = await window.ethereum.request({
-            method: 'eth_getBalance',
-            params: [accounts[0], 'latest']
-          });
-          log('잔액 (wei): ' + parseInt(balance, 16), 'info');
-
           btn.textContent = '✅ 연결됨: ' + accounts[0].slice(0, 8) + '...';
           log('--- 연결 성공! ---', 'ok');
         }
       } catch (err) {
-        log('❌ 연결 실패: code=' + err.code + ' msg=' + err.message, 'err');
+        log('❌ wallet_requestPermissions 실패: code=' + err.code + ' msg=' + err.message, 'err');
+
+        // 폴백: eth_requestAccounts
+        if (err.code !== 4001) {
+          log('eth_requestAccounts로 폴백 시도...');
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            log('✅ 폴백 성공: ' + JSON.stringify(accounts), 'ok');
+            if (accounts[0]) {
+              btn.textContent = '✅ 연결됨: ' + accounts[0].slice(0, 8) + '...';
+              log('--- 연결 성공 (폴백)! ---', 'ok');
+              return;
+            }
+          } catch (e2) {
+            log('❌ 폴백도 실패: ' + e2.message, 'err');
+          }
+        }
         btn.textContent = '다시 시도';
         btn.disabled = false;
       }
