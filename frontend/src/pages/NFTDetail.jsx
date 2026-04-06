@@ -1,4 +1,4 @@
-// pages/NFTDetail.jsx — NFT 상세 페이지 (백엔드 API 연동, lazy mint 지원)
+// pages/NFTDetail.jsx — NFT 상세 페이지 (다크 글래스모피즘 디자인)
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNFTDetail, buyNFT } from '../api';
@@ -63,7 +63,6 @@ export function NFTDetail() {
         });
         toast.success(`${nft.title} 구매 성공!`);
       }
-      // 새로고침
       getNFTDetail(Number(id)).then(res => setNft(res.data)).catch(() => {});
     } catch (err) {
       const msg = err.reason || err.response?.data?.error || err.message;
@@ -75,10 +74,10 @@ export function NFTDetail() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 mx-auto bg-orange-50 rounded-2xl flex items-center justify-center animate-pulse">
-            <Sparkles className="w-6 h-6 text-orange-300" />
+          <div className="w-12 h-12 mx-auto bg-th-accent-bg rounded-2xl flex items-center justify-center animate-pulse border border-th-accent-border">
+            <Sparkles className="w-6 h-6 text-th-accent" />
           </div>
-          <p className="text-gray-400 text-sm">로딩 중...</p>
+          <p className="text-th-text-secondary text-sm">로딩 중...</p>
         </div>
       </div>
     );
@@ -88,10 +87,10 @@ export function NFTDetail() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
-          <div className="w-16 h-16 mx-auto bg-gray-50 rounded-2xl flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto bg-th-surface rounded-2xl flex items-center justify-center border border-th-border">
             <span className="text-3xl">🔍</span>
           </div>
-          <p className="text-gray-500 font-medium">NFT를 찾을 수 없습니다</p>
+          <p className="text-th-text font-medium">NFT를 찾을 수 없습니다</p>
         </div>
       </div>
     );
@@ -102,11 +101,11 @@ export function NFTDetail() {
   const usagePercent = Math.round((remaining / (nft.max_executions || 100)) * 100);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in-up">
       <Button
         onClick={() => navigate(-1)}
         variant="ghost"
-        className="text-gray-600 hover:text-gray-900 hover:bg-orange-50"
+        className="text-th-text hover:text-th-sub hover:bg-th-surface-hover"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         돌아가기
@@ -115,7 +114,7 @@ export function NFTDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Image */}
         <div className="space-y-4">
-          <div className="aspect-video w-full overflow-hidden rounded-3xl bg-gradient-to-br from-orange-100 to-amber-50 border border-orange-100">
+          <div className="aspect-video w-full overflow-hidden rounded-3xl image-gradient border border-th-border">
             {nft.image_url ? (
               <img
                 src={nft.image_url}
@@ -127,7 +126,7 @@ export function NFTDetail() {
               <div className="w-full h-full flex items-center justify-center">
                 <div className="text-center">
                   <div className="text-6xl mb-2">🤖</div>
-                  <span className="text-gray-400">#{nft.token_id}</span>
+                  <span className="text-th-muted">#{nft.token_id}</span>
                 </div>
               </div>
             )}
@@ -135,15 +134,15 @@ export function NFTDetail() {
 
           {/* Transaction History */}
           {nft.transaction_history && nft.transaction_history.length > 0 && (
-            <div className="bg-white rounded-2xl p-6 border border-orange-100">
-              <h3 className="text-gray-800 font-semibold mb-4">거래 내역</h3>
+            <div className="glass rounded-2xl p-6">
+              <h3 className="text-th-sub font-semibold mb-4">거래 내역</h3>
               <div className="space-y-3">
                 {nft.transaction_history.map((tx, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="text-gray-600">
+                    <div className="text-th-text-secondary">
                       {tx.from_address?.slice(0, 6)}... → {tx.to_address?.slice(0, 6)}...
                     </div>
-                    <div className="text-orange-500 font-medium">{tx.price} ETH</div>
+                    <div className="text-th-accent font-medium">{tx.price} ETH</div>
                   </div>
                 ))}
               </div>
@@ -156,66 +155,66 @@ export function NFTDetail() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               {nft.is_for_sale ? (
-                <Badge className="bg-green-50 text-green-700 border-green-200">
+                <Badge className="bg-th-success-bg-strong text-th-success border-th-success-border">
                   <Store className="w-3 h-3 mr-1" />
                   판매중
                 </Badge>
               ) : (
-                <Badge className="bg-gray-100 text-gray-600 border-gray-200">
+                <Badge className="bg-th-surface-hover text-th-text-secondary border-th-border">
                   보유중
                 </Badge>
               )}
               {nft.category && (
-                <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                <Badge className="bg-th-accent-bg-strong text-th-accent-text border-th-accent-border">
                   {nft.category}
                 </Badge>
               )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <h1 className="text-3xl font-bold text-th-heading mb-2 tracking-tight">
               {nft.title}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-th-text">
               {nft.description || '설명 없음'}
             </p>
           </div>
 
-          <div className="border-t border-b border-orange-100 py-4 space-y-4">
+          <div className="border-t border-b border-th-border py-4 space-y-4">
             <div>
-              <div className="text-sm text-gray-500 mb-1">카테고리</div>
-              <div className="text-gray-800 font-medium">{nft.category || '일반'}</div>
+              <div className="text-sm text-th-text-secondary mb-1">카테고리</div>
+              <div className="text-th-sub font-medium">{nft.category || '일반'}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 mb-1">소유자</div>
-              <div className="text-gray-800 font-mono text-sm">{nft.owner_address}</div>
+              <div className="text-sm text-th-text-secondary mb-1">소유자</div>
+              <div className="text-th-strong font-mono text-sm">{nft.owner_address}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 mb-1">생성자</div>
-              <div className="text-gray-800 font-mono text-sm">{nft.creator_address}</div>
+              <div className="text-sm text-th-text-secondary mb-1">생성자</div>
+              <div className="text-th-strong font-mono text-sm">{nft.creator_address}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 mb-2">남은 실행 횟수</div>
+              <div className="text-sm text-th-text-secondary mb-2">남은 실행 횟수</div>
               <div className="flex items-center justify-between text-sm mb-1.5">
-                <span className="text-gray-800 font-semibold flex items-center gap-1">
-                  <Zap className="w-3.5 h-3.5 text-orange-400" />
+                <span className="text-th-sub font-semibold flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-th-accent" />
                   {remaining} / {nft.max_executions || 100}회
                 </span>
-                <span className={`text-xs font-medium ${usagePercent > 50 ? 'text-green-600' : usagePercent > 20 ? 'text-amber-600' : 'text-red-600'}`}>
+                <span className={`text-xs font-medium ${usagePercent > 50 ? 'text-th-success' : usagePercent > 20 ? 'text-th-warning' : 'text-th-error'}`}>
                   {usagePercent}%
                 </span>
               </div>
-              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-th-surface-hover rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${usagePercent > 50 ? 'bg-green-400' : usagePercent > 20 ? 'bg-amber-400' : 'bg-red-400'}`}
+                  className={`h-full rounded-full transition-all ${usagePercent > 50 ? 'bg-emerald-500' : usagePercent > 20 ? 'bg-amber-500' : 'bg-red-500'}`}
                   style={{ width: `${usagePercent}%` }}
                 />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 space-y-4 border border-orange-100">
+          <div className="glass-strong rounded-2xl p-6 space-y-4">
             <div>
-              <div className="text-sm text-gray-600 mb-2">가격</div>
-              <div className="text-4xl font-bold text-orange-500">
+              <div className="text-sm text-th-text-secondary mb-2">가격</div>
+              <div className="text-4xl font-bold text-accent-gradient">
                 {nft.price} ETH
               </div>
             </div>
@@ -224,15 +223,15 @@ export function NFTDetail() {
               <Button
                 onClick={handleBuy}
                 disabled={!isConnected}
-                className="w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white py-6 text-lg shadow-md shadow-orange-200/40 hover:shadow-lg hover:shadow-orange-300/40 transition-all"
+                className="w-full accent-gradient text-white py-6 text-lg shadow-lg shadow-th-accent-glow hover:shadow-th-accent-glow-strong transition-all border-0"
               >
                 {isConnected ? '구매하기' : '지갑을 먼저 연결하세요'}
               </Button>
             ) : isOwner ? (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                <CheckCircle2 className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                <p className="text-green-800 font-medium">내 NFT</p>
-                <p className="text-green-600 text-sm mt-1">실행 페이지에서 사용할 수 있습니다</p>
+              <div className="bg-th-success-bg border border-th-success-border rounded-xl p-4 text-center">
+                <CheckCircle2 className="w-6 h-6 text-th-success mx-auto mb-2" />
+                <p className="text-th-success-light font-medium">내 NFT</p>
+                <p className="text-th-success text-sm mt-1">실행 페이지에서 사용할 수 있습니다</p>
               </div>
             ) : null}
           </div>

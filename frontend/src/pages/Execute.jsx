@@ -71,11 +71,11 @@ export function Execute() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4 max-w-md">
-          <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto">
-            <Play className="w-10 h-10 text-orange-500" />
+          <div className="w-20 h-20 bg-th-accent-bg rounded-3xl flex items-center justify-center mx-auto border border-th-accent-border">
+            <Play className="w-10 h-10 text-th-accent" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">지갑을 연결해주세요</h2>
-          <p className="text-gray-600">AI를 실행하려면 MetaMask 지갑을 연결해야 합니다</p>
+          <h2 className="text-2xl font-bold text-th-heading">지갑을 연결해주세요</h2>
+          <p className="text-th-text">AI를 실행하려면 MetaMask 지갑을 연결해야 합니다</p>
         </div>
       </div>
     );
@@ -84,41 +84,41 @@ export function Execute() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">실행 페이지</h1>
-        <p className="text-gray-600">구매한 NFT의 AI 기능을 실행하세요</p>
+        <h1 className="text-3xl font-bold text-th-heading mb-2">실행 페이지</h1>
+        <p className="text-th-text">구매한 NFT의 AI 기능을 실행하세요</p>
       </div>
 
-      <div className="bg-white rounded-3xl p-8 space-y-6 border border-orange-100 shadow-sm">
+      <div className="glass-strong rounded-3xl p-8 space-y-6 border border-th-border">
         <div className="space-y-2">
-          <Label htmlFor="nftToken" className="text-gray-800 font-medium">NFT 토큰 ID *</Label>
+          <Label htmlFor="nftToken" className="text-th-sub font-medium">NFT 토큰 ID *</Label>
           <Input
             id="nftToken"
             value={nftToken}
             onChange={(e) => setNftToken(e.target.value)}
             placeholder="실행할 NFT의 토큰 ID를 입력하세요"
-            className="bg-orange-50/50 border-orange-100 focus:border-orange-300 focus:ring-orange-200 rounded-xl"
+            className="bg-th-surface border-th-border focus:border-th-focus focus:ring-th-ring rounded-xl text-th-sub placeholder:text-th-muted"
           />
-          <p className="text-gray-500 text-sm">
+          <p className="text-th-text-secondary text-sm">
             마이페이지의 보유 NFT 목록에서 토큰 ID를 확인할 수 있습니다
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="inputText" className="text-gray-800 font-medium">입력 텍스트 *</Label>
+          <Label htmlFor="inputText" className="text-th-sub font-medium">입력 텍스트 *</Label>
           <Textarea
             id="inputText"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="AI에게 전달할 텍스트를 입력하세요..."
             rows={8}
-            className="bg-orange-50/50 border-orange-100 focus:border-orange-300 focus:ring-orange-200 rounded-xl"
+            className="bg-th-surface border-th-border focus:border-th-focus focus:ring-th-ring rounded-xl text-th-sub placeholder:text-th-muted"
           />
         </div>
 
         <Button
           onClick={handleExecute}
           disabled={isExecuting}
-          className="w-full bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white py-6 text-base font-medium shadow-md shadow-orange-200/40 hover:shadow-lg hover:shadow-orange-300/40 transition-all"
+          className="w-full accent-gradient text-white py-6 text-base font-medium shadow-md shadow-th-accent-glow hover:shadow-lg hover:shadow-th-accent-glow-strong transition-all border-0"
         >
           {isExecuting ? (
             <>
@@ -134,15 +134,15 @@ export function Execute() {
         </Button>
 
         {result && (
-          <div className="mt-6 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border-2 border-orange-200">
+          <div className="mt-6 glass-strong rounded-2xl p-6 border border-th-border">
             <div className="flex items-center gap-2 mb-4">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              <h3 className="text-gray-800 font-semibold text-lg">실행 결과</h3>
+              <CheckCircle2 className="w-5 h-5 text-th-success" />
+              <h3 className="text-th-heading font-semibold text-lg">실행 결과</h3>
             </div>
-            <pre className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed bg-white/60 rounded-xl p-4 mb-4">
+            <pre className="text-th-strong text-sm whitespace-pre-wrap leading-relaxed bg-th-surface rounded-xl p-4 mb-4 border border-th-border">
               {result.result}
             </pre>
-            <div className="flex gap-6 text-sm text-gray-600">
+            <div className="flex gap-6 text-sm text-th-text">
               <span>사용 횟수: {result.usageCount}</span>
               <span>남은 횟수: {result.usageLeft}</span>
               {result.aiEnabled !== undefined && (

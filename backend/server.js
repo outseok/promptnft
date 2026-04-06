@@ -27,7 +27,7 @@ app.use(cors({
   methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "x-wallet-address", "x-signature", "x-nonce", "x-message", "x-contract-address"],
 }));
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 app.use(generalLimiter);
 
 // ── 장우혁 담당: 데이터 API ──

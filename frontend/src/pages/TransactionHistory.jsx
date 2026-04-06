@@ -135,13 +135,13 @@ export function TransactionHistory() {
   function getTypeInfo(type) {
     switch (type) {
       case 'sent':
-        return { label: '전송', icon: ArrowUpRight, color: 'bg-red-50 text-red-700 border-red-200' };
+        return { label: '전송', icon: ArrowUpRight, color: 'bg-th-error-bg text-th-error border-th-error-border' };
       case 'received':
-        return { label: '수신', icon: ArrowDownLeft, color: 'bg-green-50 text-green-700 border-green-200' };
+        return { label: '수신', icon: ArrowDownLeft, color: 'bg-th-success-bg text-th-success border-th-success-border' };
       case 'mint':
-        return { label: '민팅', icon: ReceiptText, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+        return { label: '민팅', icon: ReceiptText, color: 'bg-th-info-bg text-th-info border-th-info-border' };
       default:
-        return { label: '기타', icon: ReceiptText, color: 'bg-gray-50 text-gray-700 border-gray-200' };
+        return { label: '기타', icon: ReceiptText, color: 'bg-th-surface-hover text-th-text border-th-border' };
     }
   }
 
@@ -149,11 +149,11 @@ export function TransactionHistory() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4 max-w-md">
-          <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto">
-            <ReceiptText className="w-10 h-10 text-orange-500" />
+          <div className="w-20 h-20 bg-th-accent-bg rounded-3xl flex items-center justify-center mx-auto border border-th-accent-border">
+            <ReceiptText className="w-10 h-10 text-th-accent" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">지갑을 연결해주세요</h2>
-          <p className="text-gray-600">거래 내역을 확인하려면 MetaMask 지갑을 연결해야 합니다</p>
+          <h2 className="text-2xl font-bold text-th-heading">지갑을 연결해주세요</h2>
+          <p className="text-th-text">거래 내역을 확인하려면 MetaMask 지갑을 연결해야 합니다</p>
         </div>
       </div>
     );
@@ -163,15 +163,15 @@ export function TransactionHistory() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">거래 내역</h1>
-          <p className="text-gray-600">블록체인에서 조회한 NFT 거래 기록</p>
+          <h1 className="text-3xl font-bold text-th-heading mb-2">거래 내역</h1>
+          <p className="text-th-text">블록체인에서 조회한 NFT 거래 기록</p>
         </div>
         <Button
           onClick={refreshTransactions}
           variant="outline"
           size="sm"
           disabled={loading}
-          className="border-orange-200 text-gray-700 hover:bg-orange-50"
+          className="border-th-border-strong text-th-strong hover:bg-th-surface-hover"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           새로고침
@@ -179,7 +179,7 @@ export function TransactionHistory() {
       </div>
 
       {/* 필터 & 검색 */}
-      <div className="bg-white rounded-3xl p-5 border border-orange-100 shadow-sm">
+      <div className="glass rounded-3xl p-5 border border-th-border">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex gap-2">
             {[
@@ -195,8 +195,8 @@ export function TransactionHistory() {
                 onClick={() => setFilterType(key)}
                 className={
                   filterType === key
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-400 text-white'
-                    : 'border-orange-200 text-gray-600 hover:bg-orange-50'
+                    ? 'accent-gradient text-white border-0'
+                    : 'border-th-border-strong text-th-text hover:bg-th-surface-hover'
                 }
               >
                 <Filter className="w-3 h-3 mr-1" />
@@ -205,12 +205,12 @@ export function TransactionHistory() {
             ))}
           </div>
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-th-text-secondary" />
             <Input
               placeholder="토큰 ID로 검색..."
               value={searchTokenId}
               onChange={(e) => setSearchTokenId(e.target.value)}
-              className="pl-10 bg-orange-50/50 border-orange-100 focus:border-orange-300 rounded-xl"
+              className="pl-10 bg-th-surface border-th-border focus:border-th-focus rounded-xl text-th-sub placeholder:text-th-muted"
             />
           </div>
         </div>
@@ -218,17 +218,17 @@ export function TransactionHistory() {
 
       {/* 거래 목록 */}
       {loading ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-orange-100">
-          <RefreshCw className="w-8 h-8 text-orange-400 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">블록체인에서 거래 내역을 조회 중...</p>
+        <div className="text-center py-16 glass rounded-3xl border border-th-border">
+          <RefreshCw className="w-8 h-8 text-th-accent animate-spin mx-auto mb-4" />
+          <p className="text-th-text">블록체인에서 거래 내역을 조회 중...</p>
         </div>
       ) : filteredTransactions.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-orange-100">
-          <div className="w-16 h-16 bg-orange-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
-            <ReceiptText className="w-8 h-8 text-orange-400" />
+        <div className="text-center py-16 glass rounded-3xl border border-th-border">
+          <div className="w-16 h-16 bg-th-surface-hover rounded-3xl flex items-center justify-center mx-auto mb-4 border border-th-border">
+            <ReceiptText className="w-8 h-8 text-th-text-secondary" />
           </div>
-          <p className="text-gray-600 text-lg mb-2">거래 내역이 없습니다</p>
-          <p className="text-gray-400 text-sm">NFT를 구매하거나 등록하면 거래가 기록됩니다</p>
+          <p className="text-th-strong text-lg mb-2">거래 내역이 없습니다</p>
+          <p className="text-th-text-secondary text-sm">NFT를 구매하거나 등록하면 거래가 기록됩니다</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -238,14 +238,14 @@ export function TransactionHistory() {
             return (
               <div
                 key={`${tx.txHash}-${tx.tokenId}-${i}`}
-                className="bg-white rounded-2xl p-5 flex items-center gap-4 border border-orange-100 shadow-sm hover:shadow-md transition-all"
+                className="glass rounded-2xl p-5 flex items-center gap-4 border border-th-border hover:bg-th-surface-hover transition-all"
               >
                 {/* 아이콘 */}
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                  tx.type === 'sent' ? 'bg-red-50' : tx.type === 'received' ? 'bg-green-50' : 'bg-blue-50'
+                  tx.type === 'sent' ? 'bg-th-error-bg' : tx.type === 'received' ? 'bg-th-success-bg' : 'bg-th-info-bg'
                 }`}>
                   <Icon className={`w-5 h-5 ${
-                    tx.type === 'sent' ? 'text-red-500' : tx.type === 'received' ? 'text-green-500' : 'text-blue-500'
+                    tx.type === 'sent' ? 'text-th-error' : tx.type === 'received' ? 'text-th-success' : 'text-th-info'
                   }`} />
                 </div>
 
@@ -253,9 +253,9 @@ export function TransactionHistory() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <Badge className={info.color}>{info.label}</Badge>
-                    <span className="text-gray-800 font-semibold">Token #{tx.tokenId}</span>
+                    <span className="text-th-heading font-semibold">Token #{tx.tokenId}</span>
                   </div>
-                  <div className="text-sm text-gray-500 truncate">
+                  <div className="text-sm text-th-text-secondary truncate">
                     {tx.type === 'mint' ? (
                       <>민팅 → {shortenAddress(tx.to)}</>
                     ) : tx.type === 'sent' ? (
@@ -268,7 +268,7 @@ export function TransactionHistory() {
 
                 {/* 블록 정보 */}
                 <div className="text-right flex-shrink-0">
-                  <div className="text-sm text-gray-500">Block #{tx.blockNumber}</div>
+                  <div className="text-sm text-th-text-secondary">Block #{tx.blockNumber}</div>
                 </div>
 
                 {/* Etherscan 링크 */}
@@ -277,9 +277,9 @@ export function TransactionHistory() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center hover:bg-orange-100 transition-colors"
+                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-th-surface-hover flex items-center justify-center hover:bg-th-surface-hover transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4 text-orange-500" />
+                  <ExternalLink className="w-4 h-4 text-th-accent" />
                 </a>
               </div>
             );
@@ -289,7 +289,7 @@ export function TransactionHistory() {
 
       {/* 총 건수 */}
       {!loading && filteredTransactions.length > 0 && (
-        <div className="text-center text-sm text-gray-400">
+        <div className="text-center text-sm text-th-text-secondary">
           총 {filteredTransactions.length}건의 거래 기록
         </div>
       )}

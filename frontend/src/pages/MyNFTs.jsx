@@ -60,13 +60,13 @@ export function MyNFTs() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4 max-w-md">
-          <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto">
-            <Store className="w-10 h-10 text-orange-500" />
+          <div className="w-20 h-20 bg-th-accent-bg rounded-3xl flex items-center justify-center mx-auto border border-th-accent-border">
+            <Store className="w-10 h-10 text-th-accent" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-2xl font-bold text-th-heading">
             지갑을 연결해주세요
           </h2>
-          <p className="text-gray-600">
+          <p className="text-th-text">
             나의 NFT를 확인하려면 MetaMask 지갑을 연결해야 합니다
           </p>
         </div>
@@ -80,27 +80,27 @@ export function MyNFTs() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">마이페이지</h1>
-        <p className="text-gray-600">등록하고 구매한 NFT를 관리하세요</p>
+        <h1 className="text-3xl font-bold text-th-heading mb-2">마이페이지</h1>
+        <p className="text-th-text">등록하고 구매한 NFT를 관리하세요</p>
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="bg-white border border-orange-100 rounded-2xl">
+        <TabsList className="bg-th-surface border border-th-border rounded-2xl">
           <TabsTrigger
             value="all"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-100 data-[state=active]:to-amber-100 data-[state=active]:text-orange-700 text-gray-600 rounded-xl"
+            className="data-[state=active]:bg-th-accent-bg-strong data-[state=active]:text-th-accent-text text-th-text-secondary rounded-xl"
           >
             전체 보유 ({myNfts.length})
           </TabsTrigger>
           <TabsTrigger
             value="purchased"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-100 data-[state=active]:to-amber-100 data-[state=active]:text-orange-700 text-gray-600 rounded-xl"
+            className="data-[state=active]:bg-th-accent-bg-strong data-[state=active]:text-th-accent-text text-th-text-secondary rounded-xl"
           >
             구매한 NFT ({purchasedNfts.length})
           </TabsTrigger>
           <TabsTrigger
             value="created"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-100 data-[state=active]:to-amber-100 data-[state=active]:text-orange-700 text-gray-600 rounded-xl"
+            className="data-[state=active]:bg-th-accent-bg-strong data-[state=active]:text-th-accent-text text-th-text-secondary rounded-xl"
           >
             등록한 NFT ({createdNfts.length})
           </TabsTrigger>
@@ -156,10 +156,10 @@ export function MyNFTs() {
                 return (
                   <div
                     key={nft.token_id}
-                    className="bg-white rounded-3xl p-6 flex gap-6 hover:shadow-lg transition-all cursor-pointer border border-orange-100"
+                    className="glass rounded-3xl p-6 flex gap-6 hover:bg-th-surface-hover transition-all cursor-pointer border border-th-border"
                     onClick={() => navigate(`/nft/${nft.token_id}`)}
                   >
-                    <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-50 flex-shrink-0 overflow-hidden">
+                    <div className="w-40 h-40 rounded-2xl image-gradient flex-shrink-0 overflow-hidden">
                       {nft.image_url ? (
                         <img src={nft.image_url} alt={nft.title} className="w-full h-full object-cover" />
                       ) : (
@@ -168,25 +168,25 @@ export function MyNFTs() {
                     </div>
                     <div className="flex-1 space-y-3">
                       <div>
-                        <h3 className="text-gray-800 font-bold text-xl mb-2">{nft.title}</h3>
-                        <p className="text-gray-600 text-sm line-clamp-2">{nft.description || '설명 없음'}</p>
+                        <h3 className="text-th-heading font-bold text-xl mb-2">{nft.title}</h3>
+                        <p className="text-th-text text-sm line-clamp-2">{nft.description || '설명 없음'}</p>
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         {/* 승인 상태 뱃지 */}
                         {approvalStatus === 'pending' && (
-                          <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          <Badge className="bg-th-warning-bg text-th-warning border-th-warning-border">
                             <Clock className="w-3 h-3 mr-1" />
                             승인 대기
                           </Badge>
                         )}
                         {approvalStatus === 'approved' && (
-                          <Badge className="bg-green-50 text-green-700 border-green-200">
+                          <Badge className="bg-th-success-bg text-th-success border-th-success-border">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
                             승인 완료
                           </Badge>
                         )}
                         {approvalStatus === 'rejected' && (
-                          <Badge className="bg-red-50 text-red-700 border-red-200">
+                          <Badge className="bg-th-error-bg text-th-error border-th-error-border">
                             <XCircle className="w-3 h-3 mr-1" />
                             반려됨
                           </Badge>
@@ -194,12 +194,12 @@ export function MyNFTs() {
                         {/* 판매 상태 뱃지 */}
                         {approvalStatus === 'approved' && (
                           nft.is_for_sale ? (
-                            <Badge className="bg-green-50 text-green-700 border-green-200">
+                            <Badge className="bg-th-success-bg text-th-success border-th-success-border">
                               <Store className="w-3 h-3 mr-1" />
                               판매중
                             </Badge>
                           ) : (
-                            <Badge className="bg-gray-100 text-gray-600 border-gray-200">
+                            <Badge className="bg-th-surface-hover text-th-text-secondary border-th-border">
                               판매 미등록
                             </Badge>
                           )
@@ -207,19 +207,19 @@ export function MyNFTs() {
                       </div>
                       {/* 반려 사유 */}
                       {approvalStatus === 'rejected' && nft.rejection_reason && (
-                        <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2">
-                          <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-red-700">{nft.rejection_reason}</p>
+                        <div className="bg-th-error-bg border border-th-error-border rounded-xl p-3 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-th-error mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-th-error-light">{nft.rejection_reason}</p>
                         </div>
                       )}
                       <div className="flex items-center gap-4">
                         <div>
-                          <span className="text-xs text-gray-500">가격</span>
-                          <div className="text-orange-500 font-bold">{nft.price} ETH</div>
+                          <span className="text-xs text-th-text-secondary">가격</span>
+                          <div className="text-th-accent font-bold">{nft.price} ETH</div>
                         </div>
                         <div>
-                          <span className="text-xs text-gray-500">실행</span>
-                          <div className="text-gray-800 text-sm">
+                          <span className="text-xs text-th-text-secondary">실행</span>
+                          <div className="text-th-sub text-sm">
                             {nft.execution_count || 0}/{nft.max_executions || 100}
                           </div>
                         </div>
@@ -238,12 +238,12 @@ export function MyNFTs() {
 
 function EmptyState({ text = '보유한 NFT가 없습니다', sub = '마켓플레이스에서 NFT를 구매하거나 새로 등록해보세요' }) {
   return (
-    <div className="text-center py-20 bg-white rounded-2xl border border-orange-100/60">
-      <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-        <Store className="w-8 h-8 text-orange-300" />
+    <div className="text-center py-20 glass rounded-2xl border border-th-border">
+      <div className="w-16 h-16 bg-th-surface-hover rounded-2xl flex items-center justify-center mx-auto mb-4 border border-th-border">
+        <Store className="w-8 h-8 text-th-text-secondary" />
       </div>
-      <p className="text-gray-600 font-medium mb-1">{text}</p>
-      <p className="text-gray-400 text-sm">{sub}</p>
+      <p className="text-th-strong font-medium mb-1">{text}</p>
+      <p className="text-th-text-secondary text-sm">{sub}</p>
     </div>
   );
 }
@@ -253,10 +253,10 @@ function NFTOwnedCard({ nft, onNavigate, onExecute, onToggleSale }) {
 
   return (
     <div
-      className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-lg transition-all border border-orange-100"
+      className="glass rounded-3xl overflow-hidden hover:bg-th-surface-hover transition-all border border-th-border"
     >
       <div
-        className="aspect-video w-full overflow-hidden bg-gradient-to-br from-orange-100 to-amber-50 cursor-pointer"
+        className="aspect-video w-full overflow-hidden image-gradient cursor-pointer"
         onClick={onNavigate}
       >
         {nft.image_url ? (
@@ -265,19 +265,19 @@ function NFTOwnedCard({ nft, onNavigate, onExecute, onToggleSale }) {
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <div className="text-4xl mb-2">🤖</div>
-              <span className="text-sm text-gray-400">#{nft.token_id}</span>
+              <span className="text-sm text-th-muted">#{nft.token_id}</span>
             </div>
           </div>
         )}
       </div>
       <div className="p-5 space-y-3">
-        <h3 className="text-gray-800 font-bold text-lg line-clamp-1">{nft.title}</h3>
+        <h3 className="text-th-heading font-bold text-lg line-clamp-1">{nft.title}</h3>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs text-gray-500">남은 실행</div>
-            <div className="text-orange-500 font-bold text-lg">{remaining}회</div>
+            <div className="text-xs text-th-text-secondary">남은 실행</div>
+            <div className="text-th-accent font-bold text-lg">{remaining}회</div>
           </div>
-          <Badge className={nft.is_for_sale ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-100 text-gray-600 border-gray-200"}>
+          <Badge className={nft.is_for_sale ? "bg-th-success-bg text-th-success border-th-success-border" : "bg-th-surface-hover text-th-text-secondary border-th-border"}>
             {nft.is_for_sale ? '판매중' : '보유중'}
           </Badge>
         </div>
@@ -286,14 +286,14 @@ function NFTOwnedCard({ nft, onNavigate, onExecute, onToggleSale }) {
             onClick={(e) => { e.stopPropagation(); onToggleSale(); }}
             variant="outline"
             size="sm"
-            className="flex-1 border-orange-200 text-gray-700 hover:bg-orange-50"
+            className="flex-1 border-th-border-strong text-th-strong hover:bg-th-surface-hover"
           >
             {nft.is_for_sale ? '판매 중지' : '판매 등록'}
           </Button>
           <Button
             onClick={(e) => { e.stopPropagation(); onExecute(); }}
             size="sm"
-            className="flex-1 bg-gradient-to-r from-orange-500 to-amber-400 hover:from-orange-600 hover:to-amber-500 text-white shadow-sm"
+            className="flex-1 accent-gradient text-white shadow-sm border-0"
           >
             <Play className="w-3 h-3 mr-1" />
             실행

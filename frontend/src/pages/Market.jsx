@@ -84,58 +84,61 @@ export function Market() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-amber-400 to-orange-300 p-8 sm:p-10">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wOCI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
+    <div className="space-y-8 animate-fade-in-up">
+      {/* Hero Section — Dark Gradient Mesh */}
+      <div className="relative overflow-hidden rounded-3xl hero-gradient p-8 sm:p-10 border border-th-border">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
+        {/* Decorative gradient orbs */}
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-th-accent-bg-strong rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-th-accent-bg rounded-full blur-3xl" />
         <div className="relative z-10 max-w-2xl">
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-xs font-semibold">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-th-surface-strong backdrop-blur-sm rounded-full text-th-accent-text text-xs font-semibold border border-th-border">
               <Zap className="w-3.5 h-3.5" />
-              Sepolia Testnet
+              Testnet
             </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-bold text-th-heading mb-3 leading-tight tracking-tight">
             AI 프롬프트<br className="sm:hidden" /> 마켓플레이스
           </h1>
-          <p className="text-white/85 text-base sm:text-lg leading-relaxed">
+          <p className="text-th-text text-base sm:text-lg leading-relaxed">
             검증된 AI 프롬프트를 NFT로 소유하고, 실행 권한을 블록체인으로 안전하게 거래하세요.
           </p>
           <div className="flex items-center gap-4 mt-5">
-            <div className="flex items-center gap-1.5 text-white/70 text-sm">
+            <div className="flex items-center gap-1.5 text-th-text-secondary text-sm">
               <ShoppingBag className="w-4 h-4" />
               <span>{nfts.length}개 프롬프트</span>
             </div>
           </div>
         </div>
-        <Sparkles className="absolute top-6 right-8 w-16 h-16 text-white/15 hidden sm:block" />
-        <Sparkles className="absolute bottom-8 right-24 w-8 h-8 text-white/10 hidden sm:block" />
+        <Sparkles className="absolute top-6 right-8 w-16 h-16 text-th-accent/10 hidden sm:block animate-float" />
+        <Sparkles className="absolute bottom-8 right-24 w-8 h-8 text-th-accent/5 hidden sm:block" />
       </div>
 
       {/* Search Bar */}
       <div className="relative max-w-2xl">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-th-text-secondary" />
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="프롬프트 검색..."
-          className="pl-12 py-6 text-base bg-white border-orange-100 focus:border-orange-300 focus:ring-orange-200 rounded-2xl shadow-sm"
+          className="pl-12 py-6 text-base bg-th-surface border-th-border text-th-sub placeholder:text-th-muted focus:border-th-focus focus:ring-th-ring rounded-2xl"
         />
       </div>
 
       {!isConnected && (
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200/60 rounded-2xl p-5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-            <Sparkles className="w-5 h-5 text-orange-500" />
+        <div className="glass rounded-2xl p-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-th-accent-bg-strong flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-5 h-5 text-th-accent" />
           </div>
-          <p className="text-orange-800 text-sm font-medium">
+          <p className="text-th-text text-sm font-medium">
             NFT를 구매하려면 MetaMask 지갑을 연결해주세요
           </p>
         </div>
       )}
 
       {/* NFT Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger">
         {filteredNFTs.map((nft) => (
           <NFTCard
             key={nft.token_id}
@@ -148,13 +151,13 @@ export function Market() {
 
       {filteredNFTs.length === 0 && (
         <div className="text-center py-20">
-          <div className="w-16 h-16 mx-auto mb-4 bg-orange-50 rounded-2xl flex items-center justify-center">
-            <Search className="w-8 h-8 text-orange-300" />
+          <div className="w-16 h-16 mx-auto mb-4 bg-th-surface rounded-2xl flex items-center justify-center border border-th-border">
+            <Search className="w-8 h-8 text-th-muted" />
           </div>
-          <p className="text-gray-500 font-medium">
+          <p className="text-th-text font-medium">
             {searchQuery ? '검색 결과가 없습니다' : '현재 마켓에 등록된 NFT가 없습니다'}
           </p>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-th-muted text-sm mt-1">
             {searchQuery ? '다른 키워드로 검색해보세요' : '첫 번째 프롬프트를 등록해보세요!'}
           </p>
         </div>
