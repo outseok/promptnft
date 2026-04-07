@@ -1,0 +1,36 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/nfts': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/my-nfts': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/mint': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/buy': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/admin': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
+})

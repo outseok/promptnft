@@ -1,0 +1,162 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* ── Glassmorphism ── */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.dark .glass {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+}
+.dark .glass-strong {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+/* ── Gradient mesh background ── */
+.mesh-gradient {
+  background:
+    radial-gradient(ellipse 50% 80% at 20% 40%, rgba(59, 130, 246, 0.05), transparent),
+    radial-gradient(ellipse 50% 80% at 80% 20%, rgba(99, 102, 241, 0.04), transparent),
+    radial-gradient(ellipse 40% 60% at 50% 90%, rgba(139, 92, 246, 0.03), transparent);
+}
+.dark .mesh-gradient {
+  background:
+    radial-gradient(ellipse 50% 80% at 20% 40%, rgba(139, 92, 246, 0.15), transparent),
+    radial-gradient(ellipse 50% 80% at 80% 20%, rgba(59, 130, 246, 0.1), transparent),
+    radial-gradient(ellipse 40% 60% at 50% 90%, rgba(236, 72, 153, 0.08), transparent);
+}
+
+/* ── Accent gradient ── */
+.accent-gradient {
+  background: linear-gradient(to right, var(--th-accent-from), var(--th-accent-to));
+}
+.accent-gradient:hover {
+  filter: brightness(1.1);
+}
+.text-accent-gradient {
+  background: linear-gradient(to right, var(--th-accent-from), var(--th-accent-to));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Hero gradient ── */
+.hero-gradient {
+  background: linear-gradient(to bottom right,
+    rgba(59, 130, 246, 0.08),
+    rgba(99, 102, 241, 0.04),
+    rgba(79, 70, 229, 0.08));
+}
+.dark .hero-gradient {
+  background: linear-gradient(to bottom right,
+    rgba(124, 58, 237, 0.2),
+    rgba(79, 70, 229, 0.1),
+    rgba(88, 28, 135, 0.2));
+}
+
+/* ── Image placeholder gradient ── */
+.image-gradient {
+  background: linear-gradient(to bottom right,
+    rgba(59, 130, 246, 0.05),
+    rgba(99, 102, 241, 0.03),
+    rgba(79, 70, 229, 0.05));
+}
+.dark .image-gradient {
+  background: linear-gradient(to bottom right,
+    rgba(139, 92, 246, 0.1),
+    rgba(99, 102, 241, 0.05),
+    rgba(88, 28, 135, 0.1));
+}
+
+/* ── Glow effects ── */
+.glow-accent {
+  box-shadow: 0 0 40px -10px var(--th-accent-glow-strong);
+}
+.glow-sm {
+  box-shadow: 0 0 20px -5px var(--th-accent-glow);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+:root.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+:root.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px -5px var(--th-accent-glow); }
+  50% { box-shadow: 0 0 40px -5px var(--th-accent-glow-strong); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── Staggered children ── */
+.stagger > * { animation: fadeInUp 0.5s ease-out both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(7) { animation-delay: 360ms; }
+.stagger > *:nth-child(8) { animation-delay: 420ms; }
+.stagger > *:nth-child(9) { animation-delay: 480ms; }

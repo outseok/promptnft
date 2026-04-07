@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MetaMask 연결 테스트</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #f97316; color: white; border: none; border-radius: 8px; margin: 4px; }
+    button:disabled { opacity: 0.5; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; max-height: 400px; overflow-y: auto; }
+    .ok { color: green; } .err { color: red; } .info { color: #666; }
+  </style>
+</head>
+<body>
+  <h2>MetaMask 연결 테스트</h2>
+  <button id="btn" onclick="doConnect()">지갑 연결</button>
+  <pre id="log"></pre>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const btn = document.getElementById('btn');
+
+    function log(msg, cls = 'info') {
+      logEl.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // 초기 체크
+    if (window.ethereum) {
+      log('✅ window.ethereum 감지 (isMetaMask: ' + window.ethereum.isMetaMask + ')', 'ok');
+      window.ethereum.request({ method: 'eth_accounts' })
+        .then(a => {
+          if (a.length > 0) log('✅ 이미 연결됨: ' + a[0], 'ok');
+          else log('연결된 계정 없음 — 버튼을 클릭하세요');
+        })
+        .catch(e => log('eth_accounts 오류: ' + e.message, 'err'));
+    } else {
+      log('❌ MetaMask 미설치', 'err');
+      btn.disabled = true;
+    }
+
+    async function doConnect() {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = '연결 중...';
+      log('--- eth_requestAccounts 호출 ---');
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          log('✅ 연결 성공: ' + accounts[0], 'ok');
+        } else {
+          log('계정 없음', 'err');
+        }
+      } catch (e) {
+        log('❌ 연결 실패: ' + (e.message || e), 'err');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '지갑 연결';
+      }
+    }
+  </script>
+</body>
+</html>

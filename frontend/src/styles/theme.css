@@ -1,0 +1,335 @@
+@custom-variant dark (&:is(.dark *));
+
+/* ══════════════════════════════════════════
+   Light Mode (default)
+   ══════════════════════════════════════════ */
+:root {
+  --font-sans: 'Pretendard Variable', 'Poppins', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-size: 16px;
+  --radius: 0.75rem;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+
+  /* shadcn/ui */
+  --background: #fafbfc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #475569;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eff6ff;
+  --accent-foreground: #1d4ed8;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: transparent;
+  --input-background: #f8fafc;
+  --switch-background: #cbd5e1;
+  --ring: rgba(59, 130, 246, 0.5);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #1e293b;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eff6ff;
+  --sidebar-accent-foreground: #1d4ed8;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: rgba(59, 130, 246, 0.5);
+
+  /* ── Semantic Theme Tokens ── */
+  --th-bg: #fafbfc;
+  --th-bg-alt: #f1f5f9;
+  --th-surface: #ffffff;
+  --th-surface-strong: #f8fafc;
+  --th-surface-hover: #f1f5f9;
+
+  --th-heading: #0f172a;
+  --th-sub: #1e293b;
+  --th-strong: #334155;
+  --th-text: #475569;
+  --th-text-secondary: #64748b;
+  --th-muted: #94a3b8;
+  --th-dim: #cbd5e1;
+
+  --th-border: #e2e8f0;
+  --th-border-strong: #cbd5e1;
+
+  --th-accent: #3b82f6;
+  --th-accent-hover: #2563eb;
+  --th-accent-bg: #eff6ff;
+  --th-accent-bg-strong: #dbeafe;
+  --th-accent-border: #bfdbfe;
+  --th-accent-text: #2563eb;
+  --th-accent-from: #3b82f6;
+  --th-accent-to: #2563eb;
+  --th-accent-glow: rgba(59, 130, 246, 0.18);
+  --th-accent-glow-strong: rgba(59, 130, 246, 0.32);
+
+  --th-focus: rgba(59, 130, 246, 0.5);
+  --th-ring: rgba(59, 130, 246, 0.2);
+
+  --th-success: #059669;
+  --th-success-light: #10b981;
+  --th-success-bg: #ecfdf5;
+  --th-success-bg-strong: #d1fae5;
+  --th-success-border: #a7f3d0;
+
+  --th-warning: #d97706;
+  --th-warning-light: #f59e0b;
+  --th-warning-bg: #fffbeb;
+  --th-warning-border: #fde68a;
+
+  --th-error: #dc2626;
+  --th-error-light: #ef4444;
+  --th-error-bg: #fef2f2;
+  --th-error-border: #fecaca;
+
+  --th-info: #2563eb;
+  --th-info-bg: #eff6ff;
+  --th-info-border: #bfdbfe;
+}
+
+/* ══════════════════════════════════════════
+   Dark Mode
+   ══════════════════════════════════════════ */
+.dark {
+  --background: #0a0a0f;
+  --foreground: #e8e8ed;
+  --card: rgba(255, 255, 255, 0.04);
+  --card-foreground: #e8e8ed;
+  --popover: #141420;
+  --popover-foreground: #e8e8ed;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(139, 92, 246, 0.12);
+  --secondary-foreground: #c4b5fd;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: #71717a;
+  --accent: rgba(139, 92, 246, 0.08);
+  --accent-foreground: #c4b5fd;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: transparent;
+  --input-background: rgba(255, 255, 255, 0.05);
+  --switch-background: #3f3f46;
+  --ring: rgba(139, 92, 246, 0.5);
+  --sidebar: #0f0f1a;
+  --sidebar-foreground: #e8e8ed;
+  --sidebar-primary: #8b5cf6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(139, 92, 246, 0.1);
+  --sidebar-accent-foreground: #c4b5fd;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: rgba(139, 92, 246, 0.5);
+
+  --th-bg: #0a0a0f;
+  --th-bg-alt: #141420;
+  --th-surface: rgba(255, 255, 255, 0.04);
+  --th-surface-strong: rgba(255, 255, 255, 0.07);
+  --th-surface-hover: rgba(255, 255, 255, 0.06);
+
+  --th-heading: #ffffff;
+  --th-sub: #e4e4e7;
+  --th-strong: #d4d4d8;
+  --th-text: #a1a1aa;
+  --th-text-secondary: #71717a;
+  --th-muted: #52525b;
+  --th-dim: #3f3f46;
+
+  --th-border: rgba(255, 255, 255, 0.08);
+  --th-border-strong: rgba(255, 255, 255, 0.12);
+
+  --th-accent: #8b5cf6;
+  --th-accent-hover: #a78bfa;
+  --th-accent-bg: rgba(139, 92, 246, 0.1);
+  --th-accent-bg-strong: rgba(139, 92, 246, 0.15);
+  --th-accent-border: rgba(139, 92, 246, 0.2);
+  --th-accent-text: #c4b5fd;
+  --th-accent-from: #7c3aed;
+  --th-accent-to: #4f46e5;
+  --th-accent-glow: rgba(139, 92, 246, 0.2);
+  --th-accent-glow-strong: rgba(139, 92, 246, 0.35);
+
+  --th-focus: rgba(139, 92, 246, 0.5);
+  --th-ring: rgba(139, 92, 246, 0.2);
+
+  --th-success: #34d399;
+  --th-success-light: #6ee7b7;
+  --th-success-bg: rgba(16, 185, 129, 0.1);
+  --th-success-bg-strong: rgba(16, 185, 129, 0.15);
+  --th-success-border: rgba(16, 185, 129, 0.2);
+
+  --th-warning: #fbbf24;
+  --th-warning-light: #fcd34d;
+  --th-warning-bg: rgba(245, 158, 11, 0.1);
+  --th-warning-border: rgba(245, 158, 11, 0.2);
+
+  --th-error: #f87171;
+  --th-error-light: #fca5a5;
+  --th-error-bg: rgba(239, 68, 68, 0.1);
+  --th-error-border: rgba(239, 68, 68, 0.2);
+
+  --th-info: #60a5fa;
+  --th-info-bg: rgba(59, 130, 246, 0.1);
+  --th-info-border: rgba(59, 130, 246, 0.2);
+}
+
+/* ══════════════════════════════════════════
+   Tailwind Theme Registration
+   ══════════════════════════════════════════ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Semantic tokens */
+  --color-th-bg: var(--th-bg);
+  --color-th-bg-alt: var(--th-bg-alt);
+  --color-th-surface: var(--th-surface);
+  --color-th-surface-strong: var(--th-surface-strong);
+  --color-th-surface-hover: var(--th-surface-hover);
+  --color-th-heading: var(--th-heading);
+  --color-th-sub: var(--th-sub);
+  --color-th-strong: var(--th-strong);
+  --color-th-text: var(--th-text);
+  --color-th-text-secondary: var(--th-text-secondary);
+  --color-th-muted: var(--th-muted);
+  --color-th-dim: var(--th-dim);
+  --color-th-border: var(--th-border);
+  --color-th-border-strong: var(--th-border-strong);
+  --color-th-accent: var(--th-accent);
+  --color-th-accent-hover: var(--th-accent-hover);
+  --color-th-accent-bg: var(--th-accent-bg);
+  --color-th-accent-bg-strong: var(--th-accent-bg-strong);
+  --color-th-accent-border: var(--th-accent-border);
+  --color-th-accent-text: var(--th-accent-text);
+  --color-th-accent-glow: var(--th-accent-glow);
+  --color-th-accent-glow-strong: var(--th-accent-glow-strong);
+  --color-th-focus: var(--th-focus);
+  --color-th-ring: var(--th-ring);
+  --color-th-success: var(--th-success);
+  --color-th-success-light: var(--th-success-light);
+  --color-th-success-bg: var(--th-success-bg);
+  --color-th-success-bg-strong: var(--th-success-bg-strong);
+  --color-th-success-border: var(--th-success-border);
+  --color-th-warning: var(--th-warning);
+  --color-th-warning-light: var(--th-warning-light);
+  --color-th-warning-bg: var(--th-warning-bg);
+  --color-th-warning-border: var(--th-warning-border);
+  --color-th-error: var(--th-error);
+  --color-th-error-light: var(--th-error-light);
+  --color-th-error-bg: var(--th-error-bg);
+  --color-th-error-border: var(--th-error-border);
+  --color-th-info: var(--th-info);
+  --color-th-info-bg: var(--th-info-bg);
+  --color-th-info-border: var(--th-info-border);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    letter-spacing: -0.015em;
+  }
+
+  html {
+    font-size: var(--font-size);
+    font-family: var(--font-sans);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: -0.015em;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
