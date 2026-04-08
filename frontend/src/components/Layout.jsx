@@ -47,7 +47,7 @@ function LayoutInner() {
               <div className="w-9 h-9 accent-gradient rounded-xl shadow-lg shadow-th-accent-glow flex items-center justify-center group-hover:shadow-th-accent-glow-strong transition-all duration-300 group-hover:scale-105">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold text-th-heading tracking-tight">PromptNFT</span>
+              <span className="text-lg font-bold text-th-heading tracking-tight">PromptSquare</span>
             </Link>
             <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
