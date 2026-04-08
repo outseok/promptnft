@@ -303,7 +303,7 @@ export function RegisterNFT() {
         </div>
 
         {/* 최대 실행 횟수 */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="maxExecutions" className="text-th-sub font-medium">최대 실행 횟수</Label>
           <Input
             id="maxExecutions"
@@ -316,7 +316,7 @@ export function RegisterNFT() {
             className="bg-th-surface border-th-border focus:border-th-focus focus:ring-th-ring rounded-xl text-th-sub placeholder:text-th-muted"
           />
           <p className="text-th-text-secondary text-sm">구매자가 AI를 실행할 수 있는 최대 횟수 (온체인 기록)</p>
-        </div>
+        </div> */}
 
         {/* \ubbfc\ud305 \uc2dc\uc810 \uc120\ud0dd */}
         <div className="space-y-3">
