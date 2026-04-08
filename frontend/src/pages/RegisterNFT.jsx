@@ -137,7 +137,7 @@ export function RegisterNFT() {
             <Upload className="w-10 h-10 text-th-accent" />
           </div>
           <h2 className="text-2xl font-bold text-th-heading">{'\uc9c0\uac11\uc744 \uc5f0\uacb0\ud574\uc8fc\uc138\uc694'}</h2>
-          <p className="text-th-text">NFT\ub97c \ub4f1\ub85d\ud558\ub824\uba74 MetaMask \uc9c0\uac11\uc744 \uc5f0\uacb0\ud574\uc57c \ud569\ub2c8\ub2e4</p>
+          <p className="text-th-text">NFT를 등록하려면 MetaMask 지갑을 연결해야 합니다.</p>
         </div>
       </div>
     );
@@ -213,7 +213,7 @@ export function RegisterNFT() {
             id="title"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="\uc608: GPT-4 Content Writer"
+            placeholder="예: GPT-4 Content Writer"
             required
             className="bg-th-surface border-th-border focus:border-th-focus focus:ring-th-ring rounded-xl text-th-sub placeholder:text-th-muted"
           />
