@@ -300,6 +300,10 @@ export function RegisterNFT() {
             required
             className="bg-th-surface border-th-border focus:border-th-focus focus:ring-th-ring rounded-xl text-th-sub placeholder:text-th-muted"
           />
+          <div className="bg-th-warning-bg border border-th-warning-border rounded-xl p-3 flex gap-2">
+            <span className="text-th-warning text-sm">{'\u26a0\ufe0f'}</span>
+            <p className="text-th-warning-light text-sm">{'초기 실행 횟수는 50회로 고정됩니다.'}</p>
+          </div>
         </div>
 
         {/* 최대 실행 횟수 */}

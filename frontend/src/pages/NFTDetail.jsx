@@ -180,8 +180,8 @@ export function NFTDetail() {
 
           <div className="border-t border-b border-th-border py-4 space-y-4">
             <div>
-              <div className="text-sm text-th-text-secondary mb-1">카테고리</div>
-              <div className="text-th-sub font-medium">{nft.category || '일반'}</div>
+              <div className="text-sm text-th-text-secondary mb-1">토큰 아이디</div>
+              <div className="text-th-strong font-mono text-sm">#{nft.token_id}</div>
             </div>
             <div>
               <div className="text-sm text-th-text-secondary mb-1">소유자</div>
@@ -219,7 +219,26 @@ export function NFTDetail() {
               </div>
             </div>
 
-            {nft.is_for_sale && !isOwner ? (
+            {/* 판매 등록/중지 버튼 */}
+            {isOwner && (
+              nft.is_for_sale ? (
+                <Button
+                  onClick={() => {/* 판매 중지 함수 연결 필요 */}}
+                  className="w-full bg-th-error text-white border-0 hover:bg-th-error-dark"
+                >
+                  판매 중지
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {/* 판매 등록 함수 연결 필요 */}}
+                  className="w-full accent-gradient text-white border-0"
+                >
+                  판매 등록
+                </Button>
+              )
+            )}
+
+            {!isOwner && nft.is_for_sale ? (
               <Button
                 onClick={handleBuy}
                 disabled={!isConnected}
@@ -227,7 +246,7 @@ export function NFTDetail() {
               >
                 {isConnected ? '구매하기' : '지갑을 먼저 연결하세요'}
               </Button>
-            ) : isOwner ? (
+            ) : !isOwner ? (
               <div className="bg-th-success-bg border border-th-success-border rounded-xl p-4 text-center">
                 <CheckCircle2 className="w-6 h-6 text-th-success mx-auto mb-2" />
                 <p className="text-th-success-light font-medium">내 NFT</p>

@@ -5,7 +5,7 @@ import { bytecode } from './bytecode.json';
 
 // 컨트랙트 주소 — localStorage에 저장/불러오기
 const STORAGE_KEY = 'promptnft_contract_address';
-const DEFAULT_ADDRESS = '0x4187Cf6910659B75D9e90072304A5721A3Ef0E5b';
+const DEFAULT_ADDRESS = '0xb11034f5BB72A1fdbdd8A0eb8e6D7EcD9A3c1d25';
 
 export function getContractAddress() {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_ADDRESS;
@@ -145,4 +145,12 @@ export async function getNextTokenId(provider) {
   const contract = getReadContract(provider);
   const nextId = await contract.nextTokenId();
   return Number(nextId);
+}
+
+// 재판매 등록 (자동 가격)
+export async function onChainListForResale(signer, tokenId) {
+  const contract = getWriteContract(signer);
+  const tx = await contract.listForResale(tokenId);
+  const receipt = await tx.wait();
+  return receipt.hash;
 }

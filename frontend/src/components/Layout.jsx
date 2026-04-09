@@ -191,7 +191,7 @@ function LayoutInner() {
                 <div className="w-8 h-8 accent-gradient rounded-xl flex items-center justify-center">
                   <Zap className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-base font-bold text-th-heading">PromptNFT</span>
+                <span className="text-base font-bold text-th-heading">PromptSquare</span>
               </div>
               <p className="text-th-text-secondary text-sm leading-relaxed">
                 AI 프롬프트를 NFT로 거래하는<br />
@@ -229,7 +229,7 @@ function LayoutInner() {
           {/* Bottom bar */}
           <div className="border-t border-th-border py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-th-muted">
-              © 2024-2025 PromptNFT. All rights reserved.
+              © 2024-2025 PromptSquare. All rights reserved.
             </p>
             <div className="flex items-center gap-4">
               <span className="text-xs text-th-muted">Built on Ethereum Sepolia Testnet</span>

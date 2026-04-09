@@ -36,23 +36,24 @@ export function MyNFTs() {
   }
 
   async function handleToggleSale(nft) {
-    try {
-      if (nft.is_for_sale) {
+    if (nft.is_for_sale) {
+      // 판매 중지 트랜잭션만 기존대로
+      try {
         toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
         await onChainCancelListing(signer, nft.token_id);
-      } else {
-        toast.info('MetaMask에서 판매 등록 트랜잭션을 승인해주세요...');
-        await onChainListForSale(signer, nft.token_id, String(nft.price));
+        await updateSaleStatus(nft.token_id, {
+          is_for_sale: false,
+          price: nft.price,
+        });
+        toast.success('판매 중지됨');
+        refreshMyNFTs();
+      } catch (err) {
+        const msg = err.reason || err.response?.data?.error || err.message;
+        toast.error('판매 상태 변경 실패: ' + msg);
       }
-      await updateSaleStatus(nft.token_id, {
-        is_for_sale: !nft.is_for_sale,
-        price: nft.price,
-      });
-      toast.success(nft.is_for_sale ? '판매 중지됨' : '판매 등록됨');
-      refreshMyNFTs();
-    } catch (err) {
-      const msg = err.reason || err.response?.data?.error || err.message;
-      toast.error('판매 상태 변경 실패: ' + msg);
+    } else {
+      // 판매 등록은 재판매 폼으로 이동
+      navigate(`/resale/${nft.token_id}`);
     }
   }
 
