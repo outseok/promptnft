@@ -220,7 +220,7 @@ export function RegisterNFT() {
         </div>
 
         {/* \uce74\ud14c\uace0\ub9ac */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="category" className="text-th-sub font-medium">{'\uce74\ud14c\uace0\ub9ac'}</Label>
           <select
             id="category"
@@ -234,7 +234,7 @@ export function RegisterNFT() {
             <option value="art">{'\uc544\ud2b8'}</option>
             <option value="business">{'\ube44\uc988\ub2c8\uc2a4'}</option>
           </select>
-        </div>
+        </div> */}
 
         {/* \uc124\uba85 */}
         <div className="space-y-2">
