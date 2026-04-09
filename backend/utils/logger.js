@@ -4,9 +4,27 @@
 
 const winston = require("winston");
 
+function sanitize(msg) {
+  return String(msg)
+    .replace(/promptContent[=:].*/gi, "promptContent=[REDACTED]")
+    .replace(/systemPrompt[=:].*/gi, "systemPrompt=[REDACTED]")
+    .replace(/ENCRYPT_KEY[=:].*/gi, "ENCRYPT_KEY=[REDACTED]")
+    .replace(/encrypted_content[=:].*/gi, "encrypted_content=[REDACTED]")
+    .replace(/plainText[=:].*/gi, "plainText=[REDACTED]")
+    .replace(/decrypted[=:].*/gi, "decrypted=[REDACTED]")
+    .replace(/[0-9a-f]{32}:[0-9a-f]{16,}/gi, "[ENCRYPTED_DATA]")
+    .replace(/sk-[A-Za-z0-9_-]{20,}/g, "sk-[REDACTED]");
+}
+
+const sanitizeFormat = winston.format((info) => {
+  info.message = sanitize(info.message);
+  return info;
+});
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   format: winston.format.combine(
+    sanitizeFormat(),
     winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
     winston.format.printf(({ timestamp, level, message }) => {
       return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
@@ -19,11 +37,6 @@ const logger = winston.createLogger({
   ],
 });
 
-logger.sanitize = (msg) => {
-  return String(msg)
-    .replace(/promptContent=.*/gi, "promptContent=[HIDDEN]")
-    .replace(/systemPrompt.*/gi, "systemPrompt=[HIDDEN]")
-    .replace(/ENCRYPT_KEY.*/gi, "ENCRYPT_KEY=[HIDDEN]");
-};
+logger.sanitize = sanitize;
 
 module.exports = logger;

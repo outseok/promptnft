@@ -1,3 +1,10 @@
+// ── NFT 소각 (burn) ──
+export async function onChainBurn(signer, tokenId) {
+  const contract = getWriteContract(signer);
+  const tx = await contract.burn(tokenId);
+  const receipt = await tx.wait();
+  return receipt.hash;
+}
 // contract.js — 온체인 컨트랙트 헬퍼 (ethers v6)
 import { Contract, ContractFactory, parseEther } from 'ethers';
 import ABI from './abi/PromptNFT.json';
@@ -5,7 +12,7 @@ import { bytecode } from './bytecode.json';
 
 // 컨트랙트 주소 — localStorage에 저장/불러오기
 const STORAGE_KEY = 'promptnft_contract_address';
-const DEFAULT_ADDRESS = '0xb11034f5BB72A1fdbdd8A0eb8e6D7EcD9A3c1d25';
+const DEFAULT_ADDRESS = '0x8AaF1db0f4272625FdC782729E59430bB43178c3';
 
 export function getContractAddress() {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_ADDRESS;
@@ -148,9 +155,10 @@ export async function getNextTokenId(provider) {
 }
 
 // 재판매 등록 (자동 가격)
-export async function onChainListForResale(signer, tokenId) {
+// 재판매(리셀) 등록 (on-chain)
+export async function onChainListForResale(signer, tokenId, priceEth) {
   const contract = getWriteContract(signer);
-  const tx = await contract.listForResale(tokenId);
+  const tx = await contract.listForSale(tokenId, parseEther(priceEth));
   const receipt = await tx.wait();
   return receipt.hash;
 }

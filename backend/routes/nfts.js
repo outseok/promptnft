@@ -19,7 +19,7 @@ router.get("/nfts", (req, res) => {
 router.get("/nfts/:tokenId", (req, res) => {
   try {
     const tokenId = Number(req.params.tokenId);
-    if (!Number.isInteger(tokenId) || tokenId < 0) {
+    if (!Number.isInteger(tokenId)) {
       return res.status(400).json({ success: false, error: "유효하지 않은 tokenId" });
     }
 

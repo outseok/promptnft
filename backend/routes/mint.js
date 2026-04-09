@@ -4,9 +4,11 @@
 const express = require("express");
 const router = express.Router();
 const { queries } = require("../utils/db");
+const { encrypt } = require("../utils/crypto");
 
 router.post("/mint", (req, res) => {
   try {
+
     const {
       token_id, title, description, prompt_encrypted,
       creator_address, price, category, image_url,
@@ -23,7 +25,7 @@ router.post("/mint", (req, res) => {
       return res.status(400).json({ success: false, error: "title 필수" });
     }
     if (!prompt_encrypted) {
-      return res.status(400).json({ success: false, error: "prompt_encrypted 필수" });
+      return res.status(400).json({ success: false, error: "prompt_encrypted(프롬프트 평문) 필수" });
     }
     if (!creator_address || !/^0x[0-9a-fA-F]{40}$/.test(creator_address)) {
       return res.status(400).json({ success: false, error: "유효한 creator_address 필수" });
@@ -41,11 +43,15 @@ router.post("/mint", (req, res) => {
       }
     }
 
+
+    // 프롬프트 암호화 (백엔드에서 일괄 처리)
+    const encryptedPrompt = encrypt(prompt_encrypted);
+
     const result = queries.insertNFT({
       token_id: finalTokenId,
       title: title.trim(),
       description: description || "",
-      prompt_encrypted,
+      prompt_encrypted: encryptedPrompt,
       creator_address: creator_address.toLowerCase(),
       owner_address: creator_address.toLowerCase(),
       price: price || "0",
@@ -55,6 +61,11 @@ router.post("/mint", (req, res) => {
       mint_mode: isLazy ? "lazy" : "direct",
       is_minted: isLazy ? 0 : 1,
     });
+
+    // prompts 테이블에도 upsert (동기화)
+    const db = require("../utils/db");
+    db.prepare("INSERT OR REPLACE INTO prompts (token_id, encrypted_content) VALUES (?, ?)")
+      .run(String(finalTokenId), encryptedPrompt);
 
     console.log(`[민팅 저장] tokenId=${finalTokenId}, mode=${isLazy ? "lazy" : "direct"}, creator=${creator_address}`);
 
@@ -95,6 +106,14 @@ router.post("/buy", (req, res) => {
         Number(new_token_id),
         buyer_address.toLowerCase()
       );
+
+      // prompts 테이블도 upsert로 보강
+      const db = require("../utils/db");
+      const nftAfter = queries.getNFTByTokenId(Number(new_token_id));
+      if (nftAfter && nftAfter.prompt_encrypted) {
+        db.prepare("INSERT OR REPLACE INTO prompts (token_id, encrypted_content) VALUES (?, ?)")
+          .run(String(new_token_id), nftAfter.prompt_encrypted);
+      }
 
       queries.insertTransaction({
         token_id: Number(new_token_id),

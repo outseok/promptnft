@@ -1,7 +1,8 @@
 // pages/RegisterNFT.jsx — NFT 등록 페이지 (민팅 시점 선택 + 승인 요청 흐름)
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../context/WalletContext';
-import { encryptPrompt, mintNFT } from '../api';
+import { encryptPrompt, mintNFT, screenPrompt } from '../api';
 import { onChainMint, onChainListForSale, getNextTokenId } from '../contract';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,6 +12,7 @@ import { toast } from 'sonner';
 import { Upload, CheckCircle2, Clock, Zap, ShoppingCart, Info } from 'lucide-react';
 
 export function RegisterNFT() {
+  const navigate = useNavigate();
   const { isConnected, address, signer, provider } = useWallet();
   const [formData, setFormData] = useState({
     title: '',
@@ -48,6 +50,23 @@ export function RegisterNFT() {
 
     setLoading(true);
     try {
+      // 1. LLM 프롬프트 검증
+      const screenRes = await screenPrompt({
+        prompt: formData.prompt,
+        walletAddress: address,
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+        category: formData.category,
+        image_url: thumbnail || null,
+        mint_mode: formData.mintTiming === 'on_purchase' ? 'lazy' : 'direct',
+      });
+      if (screenRes.result !== 'PASS') {
+        toast.error(`AI 검증 실패: ${screenRes.reason || '등록 불가한 프롬프트입니다.'}`);
+        setLoading(false);
+        return;
+      }
+
       const tokenURI = JSON.stringify({
         title: formData.title,
         description: formData.description,
@@ -64,7 +83,7 @@ export function RegisterNFT() {
         const mintRes = await mintNFT({
           title: formData.title,
           description: formData.description,
-          prompt_encrypted: '[encrypted]',
+          prompt_encrypted: formData.prompt, // 평문 전달
           creator_address: address,
           price: formData.price,
           category: formData.category,
@@ -73,13 +92,6 @@ export function RegisterNFT() {
           max_executions: usageLimit,
         });
         finalTokenId = mintRes.token_id;
-
-        // 프롬프트 암호화
-        await encryptPrompt({
-          tokenId: finalTokenId,
-          promptContent: formData.prompt,
-          walletAddress: address,
-        });
       } else {
         // Direct mint: 즉시 온체인 민팅
         toast.info('MetaMask에서 민팅 트랜잭션을 승인해주세요...');
@@ -88,19 +100,12 @@ export function RegisterNFT() {
 
         toast.info('온체인 민팅 완료! 백엔드 저장 중...');
 
-        // 프롬프트 암호화
-        await encryptPrompt({
-          tokenId: finalTokenId,
-          promptContent: formData.prompt,
-          walletAddress: address,
-        });
-
         // 백엔드 저장
         await mintNFT({
           token_id: finalTokenId,
           title: formData.title,
           description: formData.description,
-          prompt_encrypted: '[encrypted]',
+          prompt_encrypted: formData.prompt, // 평문 전달
           creator_address: address,
           price: formData.price,
           category: formData.category,
@@ -116,14 +121,18 @@ export function RegisterNFT() {
         }
       }
 
-      toast.success('NFT 등록 완료!', { duration: 5000 });
+      toast.success('NFT 등록 완료!', { duration: 3000 });
       setSubmittedMode(isLazy ? 'lazy' : 'direct');
       setSubmitted(true);
       setFormData({ title: '', description: '', prompt: '', price: '0.01', category: 'general', mintTiming: 'on_approve', maxExecutions: '50' });
       setThumbnail(null);
+      // 등록 성공 시 마켓 페이지로 이동 (2초 후)
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
     } catch (err) {
       const msg = err.reason || err.response?.data?.error || err.message;
-      toast.error('\ub4f1\ub85d \uc2e4\ud328: ' + msg);
+      toast.error('등록 실패: ' + msg);
     } finally {
       setLoading(false);
     }

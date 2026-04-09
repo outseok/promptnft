@@ -181,7 +181,13 @@ export function NFTDetail() {
           <div className="border-t border-b border-th-border py-4 space-y-4">
             <div>
               <div className="text-sm text-th-text-secondary mb-1">토큰 아이디</div>
-              <div className="text-th-strong font-mono text-sm">#{nft.token_id}</div>
+                {nft.mint_mode === 'lazy' && (!nft.token_id || nft.token_id < 0 || nft.token_id === '-1') ? (
+                  <div>
+                    <span className="inline-block px-2 py-1 rounded bg-th-surface-hover text-th-accent font-semibold text-xs mb-1">판매 완료 시 토큰아이디가 생성됩니다.</span>
+                  </div>
+                ) : (
+                  <div className="text-th-strong font-mono text-sm">#{nft.token_id}</div>
+                )}
             </div>
             <div>
               <div className="text-sm text-th-text-secondary mb-1">소유자</div>

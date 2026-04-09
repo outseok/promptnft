@@ -99,9 +99,9 @@ export function NFTCard({ nft, showBuyButton = false, onBuy }) {
             </span>
             <span className="text-th-muted text-xs font-medium">ETH</span>
           </div>
-          <span className="text-[11px] text-th-muted font-mono">
-            #{nft.token_id}
-          </span>
+          {nft.token_id && nft.token_id > 0 ? (
+            <span className="text-[11px] text-th-muted font-mono">#{nft.token_id}</span>
+          ) : null}
         </div>
 
         {showBuyButton && isConnected && (

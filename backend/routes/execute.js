@@ -61,7 +61,7 @@ router.post("/", async (req, res, next) => {
     if (nftMeta && nftMeta.creator_address === wallet.toLowerCase()) {
       logger.warn(`창작자 실행 차단 — wallet=${wallet.slice(0,8)}... tokenId=${tokenId}`);
       return res.status(403).json({
-        error: "창작자는 자신이 만든 NFT를 실행할 수 없습니다. 프롬프트 원문을 이미 알고 있기 때문입니다."
+        error: "창작자는 자신이 만든 NFT를 실행할 수 없습니다."
       });
     }
 
@@ -77,16 +77,32 @@ router.post("/", async (req, res, next) => {
       });
     }
 
+
     // ── STEP 3: 프롬프트 복호화 ──
-    const row = db
+    let row = db
       .prepare("SELECT encrypted_content FROM prompts WHERE token_id = ?")
       .get(String(tokenId));
 
+    // fallback: nfts 테이블에서 복구
+    if (!row) {
+      const nft = db.prepare("SELECT prompt_encrypted FROM nfts WHERE token_id = ?").get(String(tokenId));
+      if (nft && nft.prompt_encrypted) {
+        db.prepare("INSERT INTO prompts (token_id, encrypted_content) VALUES (?, ?)")
+          .run(String(tokenId), nft.prompt_encrypted);
+        row = { encrypted_content: nft.prompt_encrypted };
+      }
+    }
     if (!row) {
       return res.status(404).json({ error: "프롬프트 데이터가 없습니다" });
     }
 
-    const systemPrompt = decrypt(row.encrypted_content);
+    let systemPrompt;
+    try {
+      systemPrompt = decrypt(row.encrypted_content);
+    } catch {
+      logger.error(`프롬프트 복호화 실패 — tokenId=${tokenId}`);
+      return res.status(500).json({ error: "프롬프트 처리 중 오류가 발생했습니다" });
+    }
 
     // ── STEP 4: AI 실행 ──
     let result;
@@ -105,30 +121,49 @@ router.post("/", async (req, res, next) => {
       });
 
       result = completion.choices[0].message.content;
-      logger.info(`OpenAI 응답 완료 — tokenId=${tokenId}, tokens=${completion.usage?.total_tokens}`);
+      logger.info(`AI 응답 완료 — tokenId=${tokenId}, tokens=${completion.usage?.total_tokens}`);
     } else {
       // API 키 없으면 데모 응답
       result =
         `[데모 실행 결과]\n\n` +
         `입력: "${userMessage}"\n\n` +
-        `시스템 프롬프트가 복호화되어 AI에 전달됩니다.\n` +
-        `실제 연동을 위해 .env에 OPENAI_API_KEY를 설정하세요.`;
+        `AI 모델이 연동되지 않아 데모 응답을 반환합니다.\n` +
+        `관리자에게 문의하세요.`;
     }
+
+    // 메모리에서 평문 즉시 제거
+    systemPrompt = null;
 
     // ── STEP 5: 사용량 업데이트 (토큰 단위) ──
     queries.incrementExecution(Number(tokenId));
     queries.insertExecutionLog(Number(tokenId), wallet.toLowerCase());
 
     const newCount = curExec + 1;
+    const usageLeft = maxExec - newCount;
     logger.info(`실행 완료 — tokenId=${tokenId} 사용횟수=${newCount}/${maxExec}`);
+
+    // ── STEP 5.5: 사용량 소진 시 DB에서 burn 처리 ──
+    let burned = false;
+    if (usageLeft <= 0) {
+      try {
+        queries.burnNFT(Number(tokenId));
+        // 프롬프트 데이터도 삭제
+        db.prepare("DELETE FROM prompts WHERE token_id = ?").run(String(tokenId));
+        logger.info(`NFT burn 처리 완료 — tokenId=${tokenId} (사용량 소진)`);
+        burned = true;
+      } catch (burnErr) {
+        logger.error(`NFT burn 처리 실패 — tokenId=${tokenId}`);
+      }
+    }
 
     // ── STEP 6: 결과 반환 ──
     res.json({
       success: true,
       result,
       usageCount: newCount,
-      usageLeft: maxExec - newCount,
+      usageLeft: Math.max(usageLeft, 0),
       usageLimit: maxExec,
+      burned,
       aiEnabled: !!openai,
       executionInfo: req.executionInfo || null,
     });

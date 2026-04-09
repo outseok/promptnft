@@ -24,17 +24,18 @@ function encrypt(plainText) {
 }
 
 function decrypt(encryptedData) {
-  const [ivHex, encHex] = encryptedData.split(":");
-  const iv = Buffer.from(ivHex, "hex");
-  const encrypted = Buffer.from(encHex, "hex");
-  const decipher = crypto.createDecipheriv("aes-256-cbc", getKey(), iv);
-  const decrypted = Buffer.concat([
-    decipher.update(encrypted),
-    decipher.final(),
-  ]).toString("utf8");
-
-  logger.info("프롬프트 복호화 완료 (내용 비공개)");
-  return decrypted;
+  try {
+    const [ivHex, encHex] = encryptedData.split(":");
+    const iv = Buffer.from(ivHex, "hex");
+    const encrypted = Buffer.from(encHex, "hex");
+    const decipher = crypto.createDecipheriv("aes-256-cbc", getKey(), iv);
+    return Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]).toString("utf8");
+  } catch {
+    throw new Error("복호화 실패");
+  }
 }
 
 module.exports = { encrypt, decrypt };

@@ -37,23 +37,50 @@ export function MyNFTs() {
 
   async function handleToggleSale(nft) {
     if (nft.is_for_sale) {
-      // 판매 중지 트랜잭션만 기존대로
+      // 판매 중지
       try {
-        toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
-        await onChainCancelListing(signer, nft.token_id);
-        await updateSaleStatus(nft.token_id, {
-          is_for_sale: false,
-          price: nft.price,
-        });
-        toast.success('판매 중지됨');
-        refreshMyNFTs();
+        if (nft.mint_mode === 'lazy' && (!nft.token_id || nft.token_id < 0)) {
+          // Lazy mint: 온체인 트랜잭션 없이 DB에만 상태 변경
+          await updateSaleStatus(nft.token_id, {
+            is_for_sale: false,
+            price: nft.price,
+          });
+          toast.success('마켓에서 내림 처리되었습니다.');
+          refreshMyNFTs();
+        } else {
+          // 즉시 민팅된 NFT: 온체인 + DB
+          toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
+          await onChainCancelListing(signer, nft.token_id);
+          await updateSaleStatus(nft.token_id, {
+            is_for_sale: false,
+            price: nft.price,
+          });
+          toast.success('판매 중지됨');
+          refreshMyNFTs();
+        }
       } catch (err) {
         const msg = err.reason || err.response?.data?.error || err.message;
         toast.error('판매 상태 변경 실패: ' + msg);
       }
     } else {
-      // 판매 등록은 재판매 폼으로 이동
-      navigate(`/resale/${nft.token_id}`);
+      // 판매 등록 분기
+      if (nft.creator_address === address?.toLowerCase()) {
+        // 내가 등록한 NFT: 마켓에 바로 등록
+        try {
+          await updateSaleStatus(nft.token_id, {
+            is_for_sale: true,
+            price: nft.price,
+          });
+          toast.success('마켓에 등록되었습니다.');
+          refreshMyNFTs();
+        } catch (err) {
+          const msg = err.reason || err.response?.data?.error || err.message;
+          toast.error('마켓 등록 실패: ' + msg);
+        }
+      } else {
+        // 구매한 NFT: 재판매 폼으로 이동
+        navigate(`/resale/${nft.token_id}`);
+      }
     }
   }
 
@@ -282,15 +309,18 @@ function NFTOwnedCard({ nft, onNavigate, onExecute, onToggleSale }) {
             {nft.is_for_sale ? '판매중' : '보유중'}
           </Badge>
         </div>
-        <div className="flex gap-2 pt-2">
-          <Button
-            onClick={(e) => { e.stopPropagation(); onToggleSale(); }}
-            variant="outline"
-            size="sm"
-            className="flex-1 border-th-border-strong text-th-strong hover:bg-th-surface-hover"
-          >
-            {nft.is_for_sale ? '판매 중지' : '판매 등록'}
-          </Button>
+             <div className="flex gap-2 pt-2">
+               <Button
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   onToggleSale();
+                 }}
+                 variant="outline"
+                 size="sm"
+                 className="flex-1 border-th-border-strong text-th-strong hover:bg-th-surface-hover"
+               >
+                 {nft.is_for_sale ? '판매 중지' : '판매 등록'}
+               </Button>
           <Button
             onClick={(e) => { e.stopPropagation(); onExecute(); }}
             size="sm"

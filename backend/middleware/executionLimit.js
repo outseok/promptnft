@@ -30,18 +30,16 @@ function executionLimit(req, res, next) {
       });
     }
 
-    queries.incrementExecution(tokenId);
-    queries.insertExecutionLog(tokenId, executorAddress.toLowerCase());
-
+    // 실행 횟수 증가는 execute.js에서 처리 (중복 방지)
     req.executionInfo = {
       token_id: tokenId,
-      execution_count: nft.execution_count + 1,
+      execution_count: nft.execution_count,
       max_executions: nft.max_executions,
-      remaining: nft.max_executions - nft.execution_count - 1,
+      remaining: nft.max_executions - nft.execution_count,
     };
 
     console.log(
-      `[실행] tokenId=${tokenId}, 사용=${nft.execution_count + 1}/${nft.max_executions}`
+      `[실행 확인] tokenId=${tokenId}, 사용=${nft.execution_count}/${nft.max_executions}`
     );
 
     next();

@@ -1,3 +1,16 @@
+// ── 프롬프트 LLM 검증 ─────────────────────────────
+export async function screenPrompt({ prompt, walletAddress, title, description, price, category, image_url, mint_mode }) {
+  return parseResponse(
+    await fetch('/api/screen', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': walletAddress || getWallet(),
+      },
+      body: JSON.stringify({ prompt, walletAddress, title, description, price, category, image_url, mint_mode }),
+    })
+  );
+}
 // api.js — 백엔드 API 래퍼 (새 UI 시스템용)
 
 let _walletAddress = '';

@@ -108,6 +108,28 @@ async function initDB() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS screening_logs (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      wallet_address   TEXT    NOT NULL,
+      prompt_text      TEXT    NOT NULL,
+      title            TEXT,
+      description      TEXT,
+      price            TEXT,
+      category         TEXT,
+      image_url        TEXT,
+      mint_mode        TEXT,
+      ai_result        TEXT    NOT NULL,
+      ai_reason        TEXT,
+      ai_model         TEXT,
+      admin_decision   TEXT    DEFAULT NULL,
+      admin_reason     TEXT    DEFAULT NULL,
+      status           TEXT    DEFAULT 'pending',
+      created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at      DATETIME DEFAULT NULL
+    )
+  `);
+
   saveDB();
   logger.info(`DB 초기화 완료: ${DB_PATH}`);
   return db;
@@ -273,6 +295,15 @@ const queries = {
     runSql("DELETE FROM nfts WHERE token_id = ?", [tokenId]);
   },
 
+  // 사용량 소진 시 NFT burn 처리 (DB에서 비활성화)
+  burnNFT(tokenId) {
+    runSql(
+      `UPDATE nfts SET is_for_sale = 0, is_minted = 0,
+              updated_at = datetime('now') WHERE token_id = ?`,
+      [tokenId]
+    );
+  },
+
   // lazy mint 구매 후 실제 token_id로 업데이트
   updateTokenIdAfterLazyMint(oldTokenId, newTokenId, newOwner) {
     runSql("UPDATE nfts SET token_id = ?, owner_address = ?, is_minted = 1, is_for_sale = 0, updated_at = datetime('now') WHERE token_id = ?",
@@ -288,16 +319,47 @@ const queries = {
 
   getTableData(tableName) {
     // SQL injection 방지: 테이블 이름 화이트리스트
-    const allowed = ['nfts', 'prompts', 'usage', 'nonces', 'execution_logs', 'transactions'];
+    const allowed = ['nfts', 'prompts', 'usage', 'nonces', 'execution_logs', 'transactions', 'screening_logs'];
     if (!allowed.includes(tableName)) return [];
     return queryAll(`SELECT * FROM ${tableName} ORDER BY rowid DESC LIMIT 100`);
   },
 
   getTableCount(tableName) {
-    const allowed = ['nfts', 'prompts', 'usage', 'nonces', 'execution_logs', 'transactions'];
+    const allowed = ['nfts', 'prompts', 'usage', 'nonces', 'execution_logs', 'transactions', 'screening_logs'];
     if (!allowed.includes(tableName)) return 0;
     const row = queryOne(`SELECT COUNT(*) as cnt FROM ${tableName}`);
     return row ? row.cnt : 0;
+  },
+
+  // ── 프롬프트 심사 로그 ──
+  insertScreeningLog(data) {
+    runSql(
+      `INSERT INTO screening_logs (wallet_address, prompt_text, title, description, price, category, image_url, mint_mode, ai_result, ai_reason, ai_model, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [data.wallet_address, data.prompt_text, data.title || null, data.description || null,
+       data.price || null, data.category || null, data.image_url || null, data.mint_mode || null,
+       data.ai_result, data.ai_reason || null, data.ai_model || null,
+       data.ai_result === 'PASS' ? 'auto_approved' : 'pending']
+    );
+    return { lastInsertRowid: queryOne("SELECT last_insert_rowid() as id")?.id };
+  },
+
+  getScreeningLogs(status) {
+    if (status) {
+      return queryAll("SELECT * FROM screening_logs WHERE status = ? ORDER BY created_at DESC", [status]);
+    }
+    return queryAll("SELECT * FROM screening_logs ORDER BY created_at DESC LIMIT 200");
+  },
+
+  getScreeningLogById(id) {
+    return queryOne("SELECT * FROM screening_logs WHERE id = ?", [id]);
+  },
+
+  updateScreeningDecision(id, decision, reason) {
+    runSql(
+      `UPDATE screening_logs SET admin_decision = ?, admin_reason = ?, status = ?, reviewed_at = datetime('now') WHERE id = ?`,
+      [decision, reason || null, decision, id]
+    );
   },
 };
 

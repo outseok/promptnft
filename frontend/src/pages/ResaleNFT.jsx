@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '../context/WalletContext';
 import { useParams } from 'react-router-dom';
-import { getNFTDetail } from '../api';
-import { onChainListForResale } from '../contract';
+import { getNFTDetail, screenPrompt } from '../api';
+import { onChainListForResale, onChainBurn, onChainMint } from '../contract';
+import * as api from '../api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -55,16 +56,59 @@ export function ResaleNFT() {
     }
     setLoading(true);
     try {
-      // 즉시 재판매 등록
+      // 1. LLM 프롬프트 검증
+      const screenRes = await screenPrompt({
+        prompt: nft.prompt || nft.title || '',
+        walletAddress: nft.owner || nft.creator_address || '',
+        title: nft.title,
+        description: nft.description,
+        price: formData.price,
+        category: nft.category,
+        image_url: nft.image_url,
+        mint_mode: 'resale',
+      });
+      if (screenRes.result !== 'PASS') {
+        toast.error(`AI 검증 실패: ${screenRes.reason || '등록 불가한 프롬프트입니다.'}`);
+        setLoading(false);
+        return;
+      }
+      // 2. 기존 NFT 소각
+      toast.info('MetaMask에서 기존 NFT 소각 트랜잭션을 승인해주세요...');
+      await onChainBurn(signer, id);
+
+      // 3. 재판매 방식 분기
       if (formData.resaleMode === 'immediate') {
-        toast.info('MetaMask에서 재판매 트랜잭션을 승인해주세요...');
-        await onChainListForResale(signer, id, formData.price);
-        toast.success('재판매 등록 완료!', { duration: 5000 });
+        // 즉시 민팅 재판매: 새 민팅 + 마켓 등록
+        toast.info('MetaMask에서 새 NFT 민팅 트랜잭션을 승인해주세요...');
+        const tokenURI = JSON.stringify({
+          title: nft.title,
+          description: nft.description,
+          category: nft.category,
+        });
+        const usageLimit = nft.max_executions || 50;
+        const { tokenId } = await onChainMint(signer, tokenURI, usageLimit);
+        toast.info('MetaMask에서 마켓 등록 트랜잭션을 승인해주세요...');
+        await onChainListForResale(signer, tokenId, formData.price);
+        // [수정] 백엔드에 is_for_sale=1로 PATCH 호출 (지갑 인증 헤더 포함)
+        await fetch(`/api/nfts/${tokenId}/sale`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': api.getWallet(),
+          },
+          body: JSON.stringify({ is_for_sale: 1 }),
+        });
+        toast.success('즉시 민팅 + 재판매 등록 완료!', { duration: 5000 });
       } else {
-        toast.info('아직 지원하지 않는 기능입니다');
+        // 판매 시 민팅 재판매: 마켓 등록만
+        toast.info('마켓에 재판매 등록만 진행합니다. (판매 시 민팅)');
+        await onChainListForResale(signer, id, formData.price); // 기존 id는 소각되어 있으므로, 백엔드/DB에만 등록 필요
+        toast.success('판매 시 민팅 재판매 등록 완료!', { duration: 5000 });
       }
     } catch (err) {
-      const msg = err.reason || err.response?.data?.error || err.message;
+      // 상세 에러 콘솔 출력 및 토스트에 더 많은 정보 표시
+      console.error('재판매 실패 상세:', err);
+      const msg = err.reason || err.data?.message || err.message || JSON.stringify(err);
       toast.error('재판매 실패: ' + msg);
     } finally {
       setLoading(false);
