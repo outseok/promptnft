@@ -16,8 +16,8 @@ export function NFTCard({ nft, showBuyButton = false, onBuy }) {
     navigate(`/nft/${nft.token_id}`);
   };
 
-  const remaining = (nft.max_executions || 100) - (nft.execution_count || 0);
-  const usagePercent = Math.round((remaining / (nft.max_executions || 100)) * 100);
+  const remaining = (nft.max_executions || 50) - (nft.execution_count || 0);
+  const usagePercent = Math.round((remaining / (nft.max_executions || 50)) * 100);
 
   return (
     <div
@@ -81,7 +81,7 @@ export function NFTCard({ nft, showBuyButton = false, onBuy }) {
             <span className="text-th-muted flex items-center gap-1">
               <Zap className="w-3 h-3" /> 남은 실행
             </span>
-            <span className="font-semibold text-th-text">{remaining}<span className="text-th-muted font-normal">/{nft.max_executions || 100}</span></span>
+            <span className="font-semibold text-th-text">{remaining}<span className="text-th-muted font-normal">/{nft.max_executions || 50}</span></span>
           </div>
           <div className="w-full h-1.5 bg-th-surface-hover rounded-full overflow-hidden">
             <div

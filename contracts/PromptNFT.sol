@@ -33,6 +33,7 @@ contract PromptNFT is ERC721URIStorage, ERC2981, Ownable {
     event ListingCanceled(uint256 indexed tokenId);
     event UsageRecorded(uint256 indexed tokenId, address indexed user, uint256 remaining);
     event LazyMinted(uint256 indexed tokenId, address indexed creator, address indexed buyer, string tokenURI);
+    event Burned(uint256 indexed tokenId, address indexed lastOwner, string reason);
 
     constructor(address royaltyReceiver)
         ERC721("PromptNFT", "PRMPT")
@@ -90,14 +91,42 @@ contract PromptNFT is ERC721URIStorage, ERC2981, Ownable {
         return tokenId;
     }
 
-    /// @notice 사용 기록 (on-chain) — NFT 소유자만 호출, Etherscan에 영구 기록
+    /// @notice 사용 기록 (on-chain) — NFT 소유자만 호출, 사용량 소진 시 자동 burn
     function recordUsage(uint256 tokenId) external {
         require(ownerOf(tokenId) == msg.sender, "Not token owner");
         require(usageCount[tokenId] < usageLimit[tokenId], "Usage limit reached");
 
         usageCount[tokenId] += 1;
+        uint256 remaining = usageLimit[tokenId] - usageCount[tokenId];
 
-        emit UsageRecorded(tokenId, msg.sender, usageLimit[tokenId] - usageCount[tokenId]);
+        emit UsageRecorded(tokenId, msg.sender, remaining);
+
+        // 사용량 소진 시 자동 burn
+        if (remaining == 0) {
+            _burnExhausted(tokenId, msg.sender);
+        }
+    }
+
+    /// @notice 사용량 소진된 NFT를 burn (내부 함수)
+    function _burnExhausted(uint256 tokenId, address lastOwner) internal {
+        // listing이 있으면 제거
+        if (listings[tokenId].active) {
+            delete listings[tokenId];
+            emit ListingCanceled(tokenId);
+        }
+        _burn(tokenId);
+        emit Burned(tokenId, lastOwner, "Usage exhausted");
+    }
+
+    /// @notice 소유자가 직접 burn 가능
+    function burn(uint256 tokenId) external {
+        require(ownerOf(tokenId) == msg.sender, "Not token owner");
+        if (listings[tokenId].active) {
+            delete listings[tokenId];
+            emit ListingCanceled(tokenId);
+        }
+        _burn(tokenId);
+        emit Burned(tokenId, msg.sender, "Owner burned");
     }
 
     /// @notice 잔여 사용량 조회 (누구나 호출 가능 — 구매 전 확인용)

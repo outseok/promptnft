@@ -6,7 +6,8 @@ import { onChainBuy, onChainLazyMintAndBuy } from '../contract';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { useWallet } from '../context/WalletContext';
-import { ArrowLeft, CheckCircle2, Store, Zap, Tag, User, Sparkles } from 'lucide-react';
+import { getContractAddress } from '../contract';
+import { ArrowLeft, CheckCircle2, Store, Zap, Tag, User, Sparkles, ChevronDown, ChevronUp, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function NFTDetail() {
@@ -15,6 +16,7 @@ export function NFTDetail() {
   const { isConnected, address, signer } = useWallet();
   const [nft, setNft] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [txOpen, setTxOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,8 +99,8 @@ export function NFTDetail() {
   }
 
   const isOwner = address && nft.owner_address === address.toLowerCase();
-  const remaining = (nft.max_executions || 100) - (nft.execution_count || 0);
-  const usagePercent = Math.round((remaining / (nft.max_executions || 100)) * 100);
+  const remaining = (nft.max_executions || 50) - (nft.execution_count || 0);
+  const usagePercent = Math.round((remaining / (nft.max_executions || 50)) * 100);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -132,20 +134,86 @@ export function NFTDetail() {
             )}
           </div>
 
-          {/* Transaction History */}
-          {nft.transaction_history && nft.transaction_history.length > 0 && (
-            <div className="glass rounded-2xl p-6">
-              <h3 className="text-th-sub font-semibold mb-4">거래 내역</h3>
-              <div className="space-y-3">
-                {nft.transaction_history.map((tx, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="text-th-text-secondary">
-                      {tx.from_address?.slice(0, 6)}... → {tx.to_address?.slice(0, 6)}...
-                    </div>
-                    <div className="text-th-accent font-medium">{tx.price} ETH</div>
+          {/* NFT Address / Contract Address */}
+          <div className="glass rounded-2xl p-6">
+            {nft.is_minted && nft.token_id >= 0 ? (
+              <>
+                <h3 className="text-th-sub font-semibold mb-3">NFT 주소</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-th-strong font-mono text-sm break-all">
+                      {getContractAddress()}#{nft.token_id}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${getContractAddress()}#${nft.token_id}`);
+                        toast.success('주소가 복사되었습니다');
+                      }}
+                      className="shrink-0 p-1.5 rounded-lg hover:bg-th-surface-hover text-th-text-secondary hover:text-th-sub transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
                   </div>
-                ))}
-              </div>
+                  <a
+                    href={`https://sepolia.etherscan.io/nft/${getContractAddress()}/${nft.token_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-th-accent text-xs hover:underline"
+                  >
+                    Etherscan에서 보기 ↗
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-th-sub font-semibold mb-3">컨트랙트 주소</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-th-strong font-mono text-sm break-all">{getContractAddress()}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(getContractAddress());
+                      toast.success('주소가 복사되었습니다');
+                    }}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-th-surface-hover text-th-text-secondary hover:text-th-sub transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-th-muted text-xs mt-2">구매 시 온체인 민팅이 진행됩니다</p>
+              </>
+            )}
+          </div>
+
+          {/* Transaction History (Expandable) */}
+          {nft.transaction_history && nft.transaction_history.length > 0 && (
+            <div className="glass rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setTxOpen(!txOpen)}
+                className="w-full flex items-center justify-between p-6 text-left hover:bg-th-surface-hover transition-colors"
+              >
+                <h3 className="text-th-sub font-semibold">거래 내역 ({nft.transaction_history.length})</h3>
+                {txOpen ? <ChevronUp className="w-5 h-5 text-th-text-secondary" /> : <ChevronDown className="w-5 h-5 text-th-text-secondary" />}
+              </button>
+              {txOpen && (
+                <div className="px-6 pb-6 space-y-3 border-t border-th-border pt-4">
+                  {nft.transaction_history.map((tx, i) => (
+                    <div key={i} className="space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="text-th-text-secondary">
+                          {tx.from_address?.slice(0, 6)}...{tx.from_address?.slice(-4)} → {tx.to_address?.slice(0, 6)}...{tx.to_address?.slice(-4)}
+                        </div>
+                        <div className="text-th-accent font-medium">{tx.price} ETH</div>
+                      </div>
+                      {tx.tx_hash && (
+                        <div className="text-th-muted text-xs font-mono break-all">TX: {tx.tx_hash}</div>
+                      )}
+                      {tx.created_at && (
+                        <div className="text-th-muted text-xs">{new Date(tx.created_at).toLocaleString()}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -196,7 +264,7 @@ export function NFTDetail() {
               <div className="flex items-center justify-between text-sm mb-1.5">
                 <span className="text-th-sub font-semibold flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 text-th-accent" />
-                  {remaining} / {nft.max_executions || 100}회
+                  {remaining} / {nft.max_executions || 50}회
                 </span>
                 <span className={`text-xs font-medium ${usagePercent > 50 ? 'text-th-success' : usagePercent > 20 ? 'text-th-warning' : 'text-th-error'}`}>
                   {usagePercent}%

@@ -23,8 +23,9 @@ router.post("/", async (req, res, next) => {
       });
     }
 
-    // 온체인 소유자 확인 (데모 모드에서는 스킵)
-    if (process.env.DEMO_MODE !== "true") {
+    // 온체인 소유자 확인 (데모 모드 또는 lazy mint 음수 토큰은 스킵)
+    const isLazyToken = Number(tokenId) < 0;
+    if (process.env.DEMO_MODE !== "true" && !isLazyToken) {
       const ABI = require("../abi/PromptNFT.json");
       const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_SEPOLIA_URL);
       const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, ABI, provider);
@@ -33,6 +34,13 @@ router.post("/", async (req, res, next) => {
       if (!owner || owner.toLowerCase() !== walletAddress.toLowerCase()) {
         logger.warn(`민팅 사칭 시도 — tokenId=${tokenId} wallet=${walletAddress.slice(0,8)}...`);
         return res.status(403).json({ error: "해당 NFT의 소유자가 아닙니다" });
+      }
+    } else if (isLazyToken) {
+      // lazy mint: DB에서 창작자 확인
+      const nft = db.prepare("SELECT creator_address FROM nfts WHERE token_id = ?").get(String(tokenId));
+      if (!nft || nft.creator_address !== walletAddress.toLowerCase()) {
+        logger.warn(`lazy mint 사칭 시도 — tokenId=${tokenId} wallet=${walletAddress.slice(0,8)}...`);
+        return res.status(403).json({ error: "해당 NFT의 창작자가 아닙니다" });
       }
     }
 
@@ -44,7 +52,8 @@ router.post("/", async (req, res, next) => {
     logger.info(`프롬프트 암호화 저장 완료 — tokenId=${tokenId}`);
     res.json({ success: true, tokenId });
   } catch (err) {
-    next(err);
+    logger.error(`암호화 처리 실패 — tokenId=${req.body?.tokenId}`);
+    res.status(500).json({ error: "암호화 처리 중 오류가 발생했습니다" });
   }
 });
 

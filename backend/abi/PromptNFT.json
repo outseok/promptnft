@@ -91,6 +91,31 @@
                        {
                            "indexed":  true,
                            "internalType":  "address",
+                           "name":  "lastOwner",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "reason",
+                           "type":  "string"
+                       }
+                   ],
+        "name":  "Burned",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "uint256",
+                           "name":  "tokenId",
+                           "type":  "uint256"
+                       },
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
                            "name":  "creator",
                            "type":  "address"
                        },
@@ -344,6 +369,21 @@
                         }
                     ],
         "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint256",
+                           "name":  "tokenId",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "burn",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
         "type":  "function"
     },
     {

@@ -40,6 +40,7 @@ app.use("/api", mintRouter);   // POST /api/mint, POST /api/buy, PATCH /api/nfts
 // ── 최유리 담당: 보안 + 실행 API ──
 app.use("/api/nonce",   nonceLimiter,   require("./routes/nonce"));
 app.use("/api/encrypt",                 require("./routes/encrypt"));
+app.use("/api/screen",                  require("./routes/screen"));
 app.use("/api/execute", executeLimiter,  executionLimit, require("./routes/execute"));
 
 // ── 관리자 API ──
@@ -84,7 +85,7 @@ app.get("/health", (_, res) => res.json({
 
 // ── 에러 핸들러 ──
 app.use((err, req, res, next) => {
-  logger.error(`서버 오류: ${err.message}`);
+  logger.error(`서버 오류: ${logger.sanitize(err.message)}`);
   res.status(500).json({ error: "서버 오류가 발생했습니다" });
 });
 

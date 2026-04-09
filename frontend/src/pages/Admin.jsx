@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../context/WalletContext';
-import { getNFTs, adminDeleteNFT, adminForceDelist, getDBTables, getDBTableData } from '../api';
+import { getNFTs, adminDeleteNFT, adminForceDelist, getDBTables, getDBTableData, getScreeningLogs, getScreeningDetail, adminScreeningDecision } from '../api';
 import { deployContract, getContractAddress, setContractAddress } from '../contract';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import {
   ShieldCheck, CheckCircle2, Trash2, Store, Clock,
   XCircle, Zap, ShoppingCart, RefreshCw, AlertTriangle,
-  Database, Settings, Rocket, Copy,
+  Database, Settings, Rocket, Copy, Eye, FileSearch,
 } from 'lucide-react';
 
 export function Admin() {
@@ -35,6 +35,13 @@ export function Admin() {
   const [contractAddr, setContractAddr] = useState(getContractAddress());
   const [newAddr, setNewAddr] = useState('');
   const [deploying, setDeploying] = useState(false);
+
+  // Screening review state
+  const [screeningLogs, setScreeningLogs] = useState([]);
+  const [screeningFilter, setScreeningFilter] = useState('pending');
+  const [screeningLoading, setScreeningLoading] = useState(false);
+  const [screeningDetail, setScreeningDetail] = useState(null);
+  const [screeningRejectReason, setScreeningRejectReason] = useState('');
 
   useEffect(() => {
     if (!isConnected || !isAdmin) {
@@ -171,6 +178,45 @@ export function Admin() {
     toast.success('컨트랙트 주소 변경 완료');
   }
 
+  // ── 프롬프트 심사 ──
+  async function loadScreeningLogs(status) {
+    setScreeningLoading(true);
+    try {
+      const res = await getScreeningLogs(status || null);
+      setScreeningLogs(res.data || []);
+    } catch (err) {
+      toast.error('심사 로그 로드 실패: ' + err.message);
+    } finally {
+      setScreeningLoading(false);
+    }
+  }
+
+  async function handleViewScreening(id) {
+    try {
+      const res = await getScreeningDetail(id);
+      setScreeningDetail(res.data);
+    } catch (err) {
+      toast.error('상세 조회 실패: ' + err.message);
+    }
+  }
+
+  async function handleScreeningDecision(id, decision) {
+    try {
+      const reason = decision === 'rejected' ? screeningRejectReason : null;
+      if (decision === 'rejected' && !reason?.trim()) {
+        toast.error('거절 사유를 입력해주세요');
+        return;
+      }
+      await adminScreeningDecision(id, decision, reason);
+      toast.success(decision === 'approved' ? '승인 완료 — NFT가 마켓에 등록되었습니다' : '거절 처리 완료');
+      setScreeningDetail(null);
+      setScreeningRejectReason('');
+      loadScreeningLogs(screeningFilter);
+    } catch (err) {
+      toast.error('처리 실패: ' + err.message);
+    }
+  }
+
   if (!isAdmin) return null;
 
   const forSaleNfts = nfts.filter(nft => nft.is_for_sale);
@@ -231,6 +277,14 @@ export function Admin() {
           >
             <Settings className="w-3 h-3 mr-1" />
             컨트랙트
+          </TabsTrigger>
+          <TabsTrigger
+            value="screening"
+            onClick={() => { if (screeningLogs.length === 0) loadScreeningLogs('pending'); }}
+            className="data-[state=active]:bg-th-accent-bg-strong data-[state=active]:text-th-accent-text text-th-text-secondary rounded-xl"
+          >
+            <FileSearch className="w-3 h-3 mr-1" />
+            프롬프트 심사
           </TabsTrigger>
         </TabsList>
 
@@ -335,7 +389,7 @@ export function Admin() {
                       <td className="px-6 py-4 text-th-text text-sm">{nft.category || '-'}</td>
                       <td className="px-6 py-4 text-th-accent font-semibold text-sm">{nft.price} ETH</td>
                       <td className="px-6 py-4 text-th-text font-mono text-xs">{nft.owner_address?.slice(0, 10)}...</td>
-                      <td className="px-6 py-4 text-th-text text-sm">{nft.execution_count || 0}/{nft.max_executions || 100}</td>
+                      <td className="px-6 py-4 text-th-text text-sm">{nft.execution_count || 0}/{nft.max_executions || 50}</td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center">
                           {nft.is_for_sale ? (
@@ -525,6 +579,178 @@ export function Admin() {
               </Button>
             </div>
           </div>
+        </TabsContent>
+
+        {/* ===== 프롬프트 심사 탭 ===== */}
+        <TabsContent value="screening" className="space-y-6">
+          {/* 필터 */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: 'pending', label: '대기중' },
+              { value: 'auto_approved', label: 'AI 승인' },
+              { value: 'approved', label: '관리자 승인' },
+              { value: 'rejected', label: '거절' },
+              { value: '', label: '전체' },
+            ].map((f) => (
+              <button
+                key={f.value}
+                onClick={() => { setScreeningFilter(f.value); loadScreeningLogs(f.value); }}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  screeningFilter === f.value
+                    ? 'bg-th-accent-bg-strong text-th-accent-text'
+                    : 'glass text-th-text-secondary hover:text-th-text-primary'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {screeningLoading ? (
+            <div className="text-center py-12 text-th-text-secondary">로딩 중...</div>
+          ) : screeningLogs.length === 0 ? (
+            <div className="text-center py-12 text-th-text-secondary">심사 기록이 없습니다</div>
+          ) : (
+            <div className="space-y-3">
+              {screeningLogs.map((log) => (
+                <div key={log.id} className="glass-strong rounded-2xl p-4 border border-th-border flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono text-th-text-secondary">#{log.id}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        log.status === 'approved' ? 'bg-th-success-bg text-th-success-text border border-th-success-border' :
+                        log.status === 'auto_approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        log.status === 'rejected' ? 'bg-th-error-bg text-th-error-text border border-th-error-border' :
+                        'bg-th-warning-bg text-th-warning-text border border-th-warning-border'
+                      }`}>
+                        {log.status === 'approved' ? '관리자 승인' : log.status === 'auto_approved' ? 'AI 승인' : log.status === 'rejected' ? '거절' : '대기'}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        log.ai_result === 'PASS' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        AI: {log.ai_result}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-th-text-primary truncate">{log.title || '(제목 없음)'}</p>
+                    <p className="text-xs text-th-text-secondary truncate">
+                      {log.wallet_address?.slice(0, 6)}...{log.wallet_address?.slice(-4)} · {new Date(log.created_at).toLocaleDateString('ko-KR')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleViewScreening(log.id)}
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm glass hover:bg-th-accent-bg-strong transition-all text-th-accent-text"
+                  >
+                    <Eye className="w-4 h-4" />
+                    상세
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 상세 모달 */}
+          {screeningDetail && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => { setScreeningDetail(null); setScreeningRejectReason(''); }}>
+              <div className="glass-strong rounded-3xl p-6 max-w-2xl w-full mx-4 space-y-5 border border-th-border-strong max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-th-text-primary">심사 상세 #{screeningDetail.id}</h3>
+                  <button onClick={() => { setScreeningDetail(null); setScreeningRejectReason(''); }} className="text-th-text-secondary hover:text-th-text-primary">✕</button>
+                </div>
+
+                {/* 등록 정보 */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="glass rounded-xl p-3">
+                    <span className="text-th-text-secondary text-xs">제목</span>
+                    <p className="font-medium text-th-text-primary">{screeningDetail.title || '-'}</p>
+                  </div>
+                  <div className="glass rounded-xl p-3">
+                    <span className="text-th-text-secondary text-xs">카테고리</span>
+                    <p className="font-medium text-th-text-primary">{screeningDetail.category || '-'}</p>
+                  </div>
+                  <div className="glass rounded-xl p-3">
+                    <span className="text-th-text-secondary text-xs">가격 (ETH)</span>
+                    <p className="font-medium text-th-text-primary">{screeningDetail.price || '-'}</p>
+                  </div>
+                  <div className="glass rounded-xl p-3">
+                    <span className="text-th-text-secondary text-xs">민팅 방식</span>
+                    <p className="font-medium text-th-text-primary">{screeningDetail.mint_mode === 'lazy' ? '지연 민팅' : '즉시 민팅'}</p>
+                  </div>
+                  <div className="glass rounded-xl p-3 col-span-2">
+                    <span className="text-th-text-secondary text-xs">등록자</span>
+                    <p className="font-mono text-xs text-th-text-primary break-all">{screeningDetail.wallet_address}</p>
+                  </div>
+                </div>
+
+                {/* 설명 */}
+                {screeningDetail.description && (
+                  <div className="glass rounded-xl p-3">
+                    <span className="text-th-text-secondary text-xs">설명</span>
+                    <p className="text-sm text-th-text-primary whitespace-pre-wrap">{screeningDetail.description}</p>
+                  </div>
+                )}
+
+                {/* 프롬프트 원문 */}
+                <div className="glass rounded-xl p-4 border border-th-border-strong">
+                  <span className="text-th-text-secondary text-xs font-semibold">프롬프트 원문</span>
+                  <pre className="text-sm text-th-text-primary whitespace-pre-wrap mt-2 font-mono bg-black/20 rounded-lg p-3 max-h-60 overflow-y-auto">{screeningDetail.prompt_text}</pre>
+                </div>
+
+                {/* AI 판정 */}
+                <div className="glass rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-th-text-secondary text-xs font-semibold">AI 판정</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      screeningDetail.ai_result === 'PASS' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>{screeningDetail.ai_result}</span>
+                    <span className="text-xs text-th-text-secondary">({screeningDetail.ai_model})</span>
+                  </div>
+                  <p className="text-sm text-th-text-primary">{screeningDetail.ai_reason}</p>
+                </div>
+
+                {/* 관리자 결정 */}
+                {screeningDetail.admin_decision && (
+                  <div className="glass rounded-xl p-4 border border-th-accent-bg-strong">
+                    <span className="text-th-text-secondary text-xs font-semibold">관리자 결정</span>
+                    <p className="text-sm mt-1">
+                      <span className={screeningDetail.admin_decision === 'approved' ? 'text-green-400' : 'text-red-400'}>
+                        {screeningDetail.admin_decision === 'approved' ? '승인' : '거절'}
+                      </span>
+                      {screeningDetail.admin_reason && <span className="text-th-text-secondary ml-2">— {screeningDetail.admin_reason}</span>}
+                    </p>
+                  </div>
+                )}
+
+                {/* 액션 버튼 */}
+                {(screeningDetail.status === 'pending' || screeningDetail.status === 'auto_approved' || screeningDetail.status === 'approved') && (
+                  <div className="space-y-3 pt-2">
+                    <textarea
+                      value={screeningRejectReason}
+                      onChange={(e) => setScreeningRejectReason(e.target.value)}
+                      placeholder="거절 사유 (선택)"
+                      className="w-full glass rounded-xl p-3 text-sm text-th-text-primary placeholder:text-th-text-secondary resize-none border border-th-border focus:border-th-accent-bg-strong outline-none"
+                      rows={2}
+                    />
+                    <div className="flex gap-3">
+                      {screeningDetail.status === 'pending' && (
+                        <button
+                          onClick={() => handleScreeningDecision(screeningDetail.id, 'approved', '')}
+                          className="flex-1 py-3 rounded-xl font-semibold bg-green-600 hover:bg-green-500 text-white transition-all"
+                        >
+                          승인 (NFT 등록)
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleScreeningDecision(screeningDetail.id, 'rejected', screeningRejectReason)}
+                        className="flex-1 py-3 rounded-xl font-semibold bg-red-600 hover:bg-red-500 text-white transition-all"
+                      >
+                        거절{(screeningDetail.status === 'auto_approved' || screeningDetail.status === 'approved') ? ' (AI 승인 취소)' : ''}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

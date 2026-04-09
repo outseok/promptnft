@@ -146,3 +146,11 @@ export async function getNextTokenId(provider) {
   const nextId = await contract.nextTokenId();
   return Number(nextId);
 }
+
+// ── NFT burn (사용량 소진 또는 소유자 직접) ──
+export async function onChainBurn(signer, tokenId) {
+  const contract = getWriteContract(signer);
+  const tx = await contract.burn(tokenId);
+  const receipt = await tx.wait();
+  return receipt.hash;
+}

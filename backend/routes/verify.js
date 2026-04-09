@@ -23,7 +23,6 @@ router.get("/encryption", (req, res) => {
 
     const promptStatus = prompts.map((p) => {
       const isValidFormat = /^[0-9a-f]{32}:[0-9a-f]+$/.test(p.encrypted_content);
-      const [ivHex] = p.encrypted_content.split(":");
       let canDecrypt = false;
       try {
         const result = decrypt(p.encrypted_content);
@@ -35,34 +34,23 @@ router.get("/encryption", (req, res) => {
       return {
         token_id: p.token_id,
         created_at: p.created_at,
-        encrypted_length: p.encrypted_content.length,
-        iv_hex: ivHex,
         format_valid: isValidFormat,
         decryptable: canDecrypt,
-        // 원문은 절대 노출하지 않음
       };
     });
 
     res.json({
       success: true,
       encryption: {
-        algorithm: "AES-256-CBC",
-        key_size: "256-bit (32 bytes)",
-        iv_size: "128-bit (16 bytes, random per encryption)",
-        format: "<iv_hex>:<ciphertext_hex>",
-        round_trip_test: {
-          plaintext_length: testPlain.length,
-          encrypted_sample: encrypted.slice(0, 40) + "...",
-          decrypted_matches: roundTripOk,
-        },
+        round_trip_test: roundTripOk,
       },
       stored_prompts: promptStatus,
       total_encrypted: promptStatus.length,
       all_valid: promptStatus.every((p) => p.format_valid && p.decryptable),
     });
   } catch (err) {
-    logger.error(`암호화 검증 실패: ${err.message}`);
-    res.status(500).json({ success: false, error: "암호화 검증 실패: " + err.message });
+    logger.error(`암호화 검증 실패`);
+    res.status(500).json({ success: false, error: "암호화 검증 실패" });
   }
 });
 

@@ -1,14 +1,14 @@
 // pages/RegisterNFT.jsx — NFT 등록 페이지 (민팅 시점 선택 + 승인 요청 흐름)
 import { useState } from 'react';
 import { useWallet } from '../context/WalletContext';
-import { encryptPrompt, mintNFT } from '../api';
+import { encryptPrompt, mintNFT, screenPrompt } from '../api';
 import { onChainMint, onChainListForSale, getNextTokenId } from '../contract';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
-import { Upload, CheckCircle2, Clock, Zap, ShoppingCart, Info } from 'lucide-react';
+import { Upload, CheckCircle2, Clock, Zap, ShoppingCart, Info, ShieldCheck } from 'lucide-react';
 
 export function RegisterNFT() {
   const { isConnected, address, signer, provider } = useWallet();
@@ -19,7 +19,6 @@ export function RegisterNFT() {
     price: '0.01',
     category: 'general',
     mintTiming: 'on_approve', // 'on_approve' | 'on_purchase'
-    maxExecutions: '50',
   });
   const [thumbnail, setThumbnail] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -48,12 +47,39 @@ export function RegisterNFT() {
 
     setLoading(true);
     try {
+      // ── 프롬프트 악성 콘텐츠 검사 ──
+      toast.info('프롬프트 안전성 검사 중...');
+      try {
+        const screening = await screenPrompt({
+          prompt: formData.prompt,
+          walletAddress: address,
+          title: formData.title,
+          description: formData.description,
+          price: formData.price,
+          category: formData.category,
+          image_url: thumbnail || null,
+          mint_mode: formData.mintTiming === 'on_purchase' ? 'lazy' : 'direct',
+        });
+        if (screening.result !== 'PASS') {
+          toast.warning('프롬프트가 AI 심사에서 거절되었습니다. 관리자 검토 후 승인되면 등록됩니다.', { duration: 6000 });
+          setSubmittedMode('pending');
+          setSubmitted(true);
+          setLoading(false);
+          return;
+        }
+        toast.success('프롬프트 검사 통과');
+      } catch {
+        toast.error('프롬프트 검사 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+        setLoading(false);
+        return;
+      }
+
       const tokenURI = JSON.stringify({
         title: formData.title,
         description: formData.description,
         category: formData.category,
       });
-      const usageLimit = parseInt(formData.maxExecutions) || 50;
+      const usageLimit = 50;
       const isLazy = formData.mintTiming === 'on_purchase';
 
       let finalTokenId;
@@ -72,7 +98,7 @@ export function RegisterNFT() {
           mint_mode: 'lazy',
           max_executions: usageLimit,
         });
-        finalTokenId = mintRes.token_id;
+        finalTokenId = mintRes.data?.token_id ?? mintRes.token_id;
 
         // 프롬프트 암호화
         await encryptPrompt({
@@ -119,7 +145,7 @@ export function RegisterNFT() {
       toast.success('NFT 등록 완료!', { duration: 5000 });
       setSubmittedMode(isLazy ? 'lazy' : 'direct');
       setSubmitted(true);
-      setFormData({ title: '', description: '', prompt: '', price: '0.01', category: 'general', mintTiming: 'on_approve', maxExecutions: '50' });
+      setFormData({ title: '', description: '', prompt: '', price: '0.01', category: 'general', mintTiming: 'on_approve' });
       setThumbnail(null);
     } catch (err) {
       const msg = err.reason || err.response?.data?.error || err.message;
@@ -143,24 +169,29 @@ export function RegisterNFT() {
     );
   }
 
-  // \ub4f1\ub85d \uc644\ub8cc \ud654\uba74
+  // 등록 완료 화면
   if (submitted) {
     const isDirect = submittedMode === 'direct';
+    const isPending = submittedMode === 'pending';
     return (
       <div className="max-w-2xl mx-auto">
         <div className="glass-strong rounded-3xl p-10 text-center space-y-6 border border-th-border">
-          <div className="w-20 h-20 bg-th-success-bg rounded-3xl flex items-center justify-center mx-auto border border-th-success-border">
-            {isDirect ? (
+          <div className={`w-20 h-20 ${isPending ? 'bg-th-warning-bg border-th-warning-border' : 'bg-th-success-bg border-th-success-border'} rounded-3xl flex items-center justify-center mx-auto border`}>
+            {isPending ? (
+              <ShieldCheck className="w-10 h-10 text-th-warning" />
+            ) : isDirect ? (
               <CheckCircle2 className="w-10 h-10 text-th-success" />
             ) : (
               <Clock className="w-10 h-10 text-th-success" />
             )}
           </div>
           <h2 className="text-2xl font-bold text-th-heading">
-            {isDirect ? 'NFT 민팅 및 판매 등록 완료!' : '마켓 등록이 완료되었습니다'}
+            {isPending ? '관리자 검토 대기 중' : isDirect ? 'NFT 민팅 및 판매 등록 완료!' : '마켓 등록이 완료되었습니다'}
           </h2>
           <p className="text-th-text">
-            {isDirect ? (
+            {isPending ? (
+              <>AI 심사에서 추가 확인이 필요한 프롬프트로 판별되었습니다.<br />관리자가 검토 후 승인하면 마켓에 등록됩니다.</>
+            ) : isDirect ? (
               <>온체인 민팅과 마켓 등록이 완료되었습니다.<br />마켓에서 바로 확인할 수 있습니다.</>
             ) : (
               <>마켓에 등록되었습니다.<br />구매자가 구매 시 온체인 민팅이 진행됩니다.</>
@@ -169,10 +200,16 @@ export function RegisterNFT() {
           <div className="bg-th-surface rounded-2xl p-4 text-left space-y-2 border border-th-border">
             <div className="flex items-center gap-2 text-sm text-th-text">
               <Info className="w-4 h-4 text-th-accent" />
-              <span>{isDirect ? '등록 완료 안내' : '지연 민팅 안내'}</span>
+              <span>{isPending ? '심사 안내' : isDirect ? '등록 완료 안내' : '지연 민팅 안내'}</span>
             </div>
             <ul className="text-sm text-th-text-secondary space-y-1 ml-6 list-disc">
-              {isDirect ? (
+              {isPending ? (
+                <>
+                  <li>프롬프트가 AI 안전성 검사를 통과하지 못했습니다</li>
+                  <li>관리자가 직접 원문을 확인하고 최종 결정합니다</li>
+                  <li>승인되면 자동으로 마켓에 등록됩니다</li>
+                </>
+              ) : isDirect ? (
                 <>
                   <li>NFT가 온체인에 발행되었습니다</li>
                   <li>마켓에서 즉시 판매가 시작됩니다</li>
@@ -188,7 +225,7 @@ export function RegisterNFT() {
             </ul>
           </div>
           <Button
-            onClick={() => setSubmitted(false)}
+            onClick={() => { setSubmitted(false); setSubmittedMode(null); }}
             className="accent-gradient text-white shadow-md shadow-th-accent-glow"
           >
             {'\uc0c8 NFT \ub4f1\ub85d\ud558\uae30'}
@@ -302,20 +339,14 @@ export function RegisterNFT() {
           />
         </div>
 
-        {/* 최대 실행 횟수 */}
+        {/* 최대 실행 횟수 — 50회 고정 */}
         <div className="space-y-2">
-          <Label htmlFor="maxExecutions" className="text-th-sub font-medium">최대 실행 횟수</Label>
-          <Input
-            id="maxExecutions"
-            type="number"
-            min="1"
-            max="10000"
-            value={formData.maxExecutions}
-            onChange={(e) => setFormData({ ...formData, maxExecutions: e.target.value })}
-            placeholder="50"
-            className="bg-th-surface border-th-border focus:border-th-focus focus:ring-th-ring rounded-xl text-th-sub placeholder:text-th-muted"
-          />
-          <p className="text-th-text-secondary text-sm">구매자가 AI를 실행할 수 있는 최대 횟수 (온체인 기록)</p>
+          <Label className="text-th-sub font-medium">최대 실행 횟수</Label>
+          <div className="flex items-center gap-3 bg-th-surface border border-th-border rounded-xl px-4 py-2">
+            <Zap className="w-4 h-4 text-th-accent" />
+            <span className="text-th-sub font-semibold">50회</span>
+            <span className="text-th-text-secondary text-sm">고정 (사용량 소진 시 NFT 자동 소멸)</span>
+          </div>
         </div>
 
         {/* \ubbfc\ud305 \uc2dc\uc810 \uc120\ud0dd */}

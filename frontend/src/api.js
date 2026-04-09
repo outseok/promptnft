@@ -72,6 +72,17 @@ export async function encryptPrompt(payload) {
   );
 }
 
+// ── 프롬프트 악성 콘텐츠 검사 ────────────
+export async function screenPrompt(payload) {
+  return parseResponse(
+    await fetch('/api/screen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  );
+}
+
 // ── 민팅 DB 저장 ─────────────────────────
 export async function mintNFT(payload) {
   return parseResponse(
@@ -167,6 +178,35 @@ export async function getDBTableData(tableName) {
   return parseResponse(
     await fetch(`/api/admin/db/tables/${encodeURIComponent(tableName)}`, {
       headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}
+
+// ── 관리자: 프롬프트 심사 로그 ──────────
+export async function getScreeningLogs(status) {
+  const url = status ? `/api/admin/screening?status=${status}` : '/api/admin/screening';
+  return parseResponse(
+    await fetch(url, { headers: { 'x-wallet-address': getWallet() } })
+  );
+}
+
+export async function getScreeningDetail(id) {
+  return parseResponse(
+    await fetch(`/api/admin/screening/${id}`, {
+      headers: { 'x-wallet-address': getWallet() },
+    })
+  );
+}
+
+export async function adminScreeningDecision(id, decision, reason) {
+  return parseResponse(
+    await fetch(`/api/admin/screening/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wallet-address': getWallet(),
+      },
+      body: JSON.stringify({ decision, reason }),
     })
   );
 }

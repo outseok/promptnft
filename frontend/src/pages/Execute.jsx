@@ -143,12 +143,21 @@ export function Execute() {
               {result.result}
             </pre>
             <div className="flex gap-6 text-sm text-th-text">
-              <span>사용 횟수: {result.usageCount}</span>
+              <span>사용 횟수: {result.usageCount}/{result.usageLimit || 50}</span>
               <span>남은 횟수: {result.usageLeft}</span>
               {result.aiEnabled !== undefined && (
                 <span>AI: {result.aiEnabled ? '활성' : '데모'}</span>
               )}
             </div>
+            {result.burned && (
+              <div className="mt-4 bg-th-error-bg border border-th-error-border rounded-xl p-4 flex items-start gap-3">
+                <span className="text-lg">🔥</span>
+                <div>
+                  <p className="text-th-error font-semibold">NFT가 소멸되었습니다</p>
+                  <p className="text-th-error-light text-sm">사용 횟수가 모두 소진되어 이 NFT는 자동으로 burn 처리되었습니다.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
