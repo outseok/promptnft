@@ -67,12 +67,25 @@ export function MyNFTs() {
       if (nft.creator_address === address?.toLowerCase()) {
         // 내가 등록한 NFT: 마켓에 바로 등록
         try {
-          await updateSaleStatus(nft.token_id, {
-            is_for_sale: true,
-            price: nft.price,
-          });
-          toast.success('마켓에 등록되었습니다.');
-          refreshMyNFTs();
+          if (nft.mint_mode === 'lazy' && (!nft.token_id || nft.token_id < 0)) {
+            // Lazy mint: 온체인 트랜잭션 없이 DB에만 등록
+            await updateSaleStatus(nft.token_id, {
+              is_for_sale: true,
+              price: nft.price,
+            });
+            toast.success('마켓에 등록되었습니다.');
+            refreshMyNFTs();
+          } else {
+            // 즉시 민팅된 NFT: 온체인 트랜잭션 후 DB 등록
+            toast.info('MetaMask에서 판매 등록 트랜잭션을 승인해주세요...');
+            await onChainListForSale(signer, nft.token_id, nft.price);
+            await updateSaleStatus(nft.token_id, {
+              is_for_sale: true,
+              price: nft.price,
+            });
+            toast.success('마켓에 등록되었습니다.');
+            refreshMyNFTs();
+          }
         } catch (err) {
           const msg = err.reason || err.response?.data?.error || err.message;
           toast.error('마켓 등록 실패: ' + msg);
