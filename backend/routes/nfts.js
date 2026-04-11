@@ -1,9 +1,31 @@
+
 // routes/nfts.js - NFT 목록 조회 API
 // 담당: 장우혁
 
 const express = require("express");
 const router = express.Router();
 const { queries } = require("../utils/db");
+// NFT 삭제 (소유자만)
+router.delete("/nfts/:tokenId", (req, res) => {
+  try {
+    const tokenId = Number(req.params.tokenId);
+    const walletAddress = req.headers["x-wallet-address"];
+    if (!walletAddress) {
+      return res.status(401).json({ success: false, error: "지갑 주소가 필요합니다" });
+    }
+    const nft = queries.getNFTByTokenId(tokenId);
+    if (!nft) {
+      return res.status(404).json({ success: false, error: "NFT를 찾을 수 없음" });
+    }
+    if (nft.owner_address !== walletAddress.toLowerCase()) {
+      return res.status(403).json({ success: false, error: "소유자만 삭제 가능" });
+    }
+    queries.deleteNFT(tokenId);
+    res.json({ success: true, message: "NFT 삭제 완료" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "NFT 삭제 실패" });
+  }
+});
 
 router.get("/nfts", (req, res) => {
   try {

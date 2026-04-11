@@ -1,10 +1,11 @@
 // pages/ResaleNFT.jsx — NFT 재판매 등록 폼
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWallet } from '../context/WalletContext';
 import { useParams } from 'react-router-dom';
 import { getNFTDetail, screenPrompt } from '../api';
 import { onChainListForResale, onChainBurn, onChainMint } from '../contract';
-import * as api from '../api';
+import { mintNFT } from '../api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -12,8 +13,9 @@ import { toast } from 'sonner';
 import { Zap, ShoppingCart } from 'lucide-react';
 
 export function ResaleNFT() {
-  const { isConnected, signer } = useWallet();
+  const { isConnected, signer, address } = useWallet();
   const { id } = useParams();
+  const navigate = useNavigate();
   const [nft, setNft] = useState(null);
   const [formData, setFormData] = useState({
     price: '',
@@ -75,6 +77,13 @@ export function ResaleNFT() {
       // 2. 기존 NFT 소각
       toast.info('MetaMask에서 기존 NFT 소각 트랜잭션을 승인해주세요...');
       await onChainBurn(signer, id);
+      // 기존 NFT를 DB에서도 삭제
+      await fetch(`/api/nfts/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-wallet-address': address,
+        },
+      });
 
       // 3. 재판매 방식 분기
       if (formData.resaleMode === 'immediate') {
@@ -89,16 +98,49 @@ export function ResaleNFT() {
         const { tokenId } = await onChainMint(signer, tokenURI, usageLimit);
         toast.info('MetaMask에서 마켓 등록 트랜잭션을 승인해주세요...');
         await onChainListForResale(signer, tokenId, formData.price);
-        // [수정] 백엔드에 is_for_sale=1로 PATCH 호출 (지갑 인증 헤더 포함)
+
+        // 1. 민팅 성공 후 DB에 NFT 추가
+        await mintNFT({
+          token_id: tokenId,
+          title: nft.title,
+          description: nft.description,
+          prompt_encrypted: nft.prompt || nft.title || '',
+          creator_address: nft.creator_address,
+          owner_address: address, // 소유자 명시적으로 지정
+          price: formData.price,
+          category: nft.category,
+          image_url: nft.image_url,
+          mint_mode: 'direct',
+          max_executions: nft.max_executions || 50,
+        });
+
+        // 2. PATCH 전에 owner_address가 내 address와 일치하는지 확인 (최대 5회, 500ms 간격)
+        let tries = 0;
+        let ownerOk = false;
+        while (tries < 5) {
+          const detail = await (await fetch(`/api/nfts/${tokenId}`)).json();
+          if (detail?.data?.owner_address?.toLowerCase() === address?.toLowerCase()) {
+            ownerOk = true;
+            break;
+          }
+          await new Promise(res => setTimeout(res, 500));
+          tries++;
+        }
+        if (!ownerOk) {
+          toast.error('민팅 후 소유자 정보 동기화에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+          setLoading(false);
+          return;
+        }
         await fetch(`/api/nfts/${tokenId}/sale`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-wallet-address': api.getWallet(),
+            'x-wallet-address': address,
           },
-          body: JSON.stringify({ is_for_sale: 1 }),
+          body: JSON.stringify({ is_for_sale: 1, price: formData.price }),
         });
-        toast.success('즉시 민팅 + 재판매 등록 완료!', { duration: 5000 });
+        toast.success('즉시 민팅 + 재판매 등록 완료!', { duration: 2000 });
+        navigate('/');
       } else {
         // 판매 시 민팅 재판매: 마켓 등록만
         toast.info('마켓에 재판매 등록만 진행합니다. (판매 시 민팅)');

@@ -11,7 +11,7 @@ router.post("/mint", (req, res) => {
 
     const {
       token_id, title, description, prompt_encrypted,
-      creator_address, price, category, image_url,
+      creator_address, owner_address, price, category, image_url,
       mint_mode, max_executions,
     } = req.body;
 
@@ -53,7 +53,7 @@ router.post("/mint", (req, res) => {
       description: description || "",
       prompt_encrypted: encryptedPrompt,
       creator_address: creator_address.toLowerCase(),
-      owner_address: creator_address.toLowerCase(),
+      owner_address: (owner_address || creator_address).toLowerCase(),
       price: price || "0",
       category: category || null,
       image_url: image_url || null,

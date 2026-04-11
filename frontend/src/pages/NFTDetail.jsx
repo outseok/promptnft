@@ -1,8 +1,8 @@
 // pages/NFTDetail.jsx — NFT 상세 페이지 (다크 글래스모피즘 디자인)
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getNFTDetail, buyNFT } from '../api';
-import { onChainBuy, onChainLazyMintAndBuy } from '../contract';
+import { getNFTDetail, buyNFT, updateSaleStatus } from '../api';
+import { onChainBuy, onChainLazyMintAndBuy, onChainCancelListing, onChainListForSale } from '../contract';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { useWallet } from '../context/WalletContext';
@@ -10,6 +10,40 @@ import { ArrowLeft, CheckCircle2, Store, Zap, Tag, User, Sparkles } from 'lucide
 import { toast } from 'sonner';
 
 export function NFTDetail() {
+    async function handleListForSale() {
+      try {
+        // 즉시 민팅(온체인) NFT라면 트랜잭션 발생
+        if (nft.mint_mode !== 'lazy') {
+          toast.info('MetaMask에서 판매 등록 트랜잭션을 승인해주세요...');
+          await onChainListForSale(signer, nft.token_id, String(nft.price));
+        }
+        // DB/백엔드 상태도 갱신
+        await updateSaleStatus(nft.token_id, { is_for_sale: true });
+        toast.success('판매가 등록되었습니다.');
+        // 상태 갱신
+        const res = await getNFTDetail(Number(id));
+        setNft(res.data);
+      } catch (err) {
+        toast.error('판매 등록 실패: ' + (err.message || '알 수 없는 오류'));
+      }
+    }
+  async function handleStopSale() {
+    try {
+      // 즉시 민팅(온체인) NFT라면 트랜잭션 발생
+      if (nft.mint_mode !== 'lazy') {
+        toast.info('MetaMask에서 판매 중지 트랜잭션을 승인해주세요...');
+        await onChainCancelListing(signer, nft.token_id);
+      }
+      // DB/백엔드 상태도 갱신
+      await updateSaleStatus(nft.token_id, { is_for_sale: false });
+      toast.success('판매가 중지되었습니다.');
+      // 상태 갱신
+      const res = await getNFTDetail(Number(id));
+      setNft(res.data);
+    } catch (err) {
+      toast.error('판매 중지 실패: ' + (err.message || '알 수 없는 오류'));
+    }
+  }
   const { id } = useParams();
   const navigate = useNavigate();
   const { isConnected, address, signer } = useWallet();
@@ -229,14 +263,14 @@ export function NFTDetail() {
             {isOwner && (
               nft.is_for_sale ? (
                 <Button
-                  onClick={() => {/* 판매 중지 함수 연결 필요 */}}
+                  onClick={handleStopSale}
                   className="w-full bg-th-error text-white border-0 hover:bg-th-error-dark"
                 >
                   판매 중지
                 </Button>
               ) : (
                 <Button
-                  onClick={() => {/* 판매 등록 함수 연결 필요 */}}
+                  onClick={handleListForSale}
                   className="w-full accent-gradient text-white border-0"
                 >
                   판매 등록

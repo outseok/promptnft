@@ -38,18 +38,23 @@ export function MyNFTs() {
   async function handleToggleSale(nft) {
     if (nft.is_for_sale) {
       // 판매 중지
-      try {
-        if (nft.mint_mode === 'lazy' && (!nft.token_id || nft.token_id < 0)) {
-          // Lazy mint: 온체인 트랜잭션 없이 DB에만 상태 변경
+      if (nft.mint_mode === 'lazy' && (!nft.token_id || nft.token_id < 0)) {
+        // Lazy mint: 온체인 트랜잭션 없이 DB에만 상태 변경
+        try {
           await updateSaleStatus(nft.token_id, {
             is_for_sale: false,
             price: nft.price,
           });
           toast.success('마켓에서 내림 처리되었습니다.');
           refreshMyNFTs();
-        } else {
-          // 즉시 민팅된 NFT: 온체인 + DB
-          toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
+        } catch (err) {
+          const msg = err.reason || err.response?.data?.error || err.message;
+          toast.error('판매 상태 변경 실패: ' + msg);
+        }
+      } else {
+        // 즉시 민팅된 NFT: 온체인 + DB
+        toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
+        try {
           await onChainCancelListing(signer, nft.token_id);
           await updateSaleStatus(nft.token_id, {
             is_for_sale: false,
@@ -57,10 +62,20 @@ export function MyNFTs() {
           });
           toast.success('판매 중지됨');
           refreshMyNFTs();
+        } catch (err) {
+          // revert: Not listed 에러일 때도 DB 상태만 동기화
+          if (err.message?.includes('Not listed')) {
+            await updateSaleStatus(nft.token_id, {
+              is_for_sale: false,
+              price: nft.price,
+            });
+            toast.info('이미 마켓에서 내려간 NFT입니다. DB 상태만 동기화합니다.');
+            refreshMyNFTs();
+          } else {
+            const msg = err.reason || err.response?.data?.error || err.message;
+            toast.error('판매 상태 변경 실패: ' + msg);
+          }
         }
-      } catch (err) {
-        const msg = err.reason || err.response?.data?.error || err.message;
-        toast.error('판매 상태 변경 실패: ' + msg);
       }
     } else {
       // 판매 등록 분기
@@ -153,15 +168,23 @@ export function MyNFTs() {
             <EmptyState />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myNfts.map((nft) => (
-                <NFTOwnedCard
-                  key={nft.token_id}
-                  nft={nft}
-                  onNavigate={() => navigate(`/nft/${nft.token_id}`)}
-                  onExecute={() => navigate(`/execute?tokenId=${nft.token_id}`)}
-                  onToggleSale={() => handleToggleSale(nft)}
-                />
-              ))}
+              {/* 판매중인 NFT가 있으면 같은 token_id의 보유중 NFT는 제외 */}
+              {(() => {
+                const saleTokenIds = new Set(myNfts.filter(n => n.is_for_sale).map(n => n.token_id));
+                return myNfts.filter(nft => {
+                  if (nft.is_for_sale) return true;
+                  // 보유중인데 같은 token_id의 판매중이 있으면 제외
+                  return !saleTokenIds.has(nft.token_id);
+                }).map((nft) => (
+                  <NFTOwnedCard
+                    key={nft.token_id}
+                    nft={nft}
+                    onNavigate={() => navigate(`/nft/${nft.token_id}`)}
+                    onExecute={() => navigate(`/execute?tokenId=${nft.token_id}`)}
+                    onToggleSale={() => handleToggleSale(nft)}
+                  />
+                ));
+              })()}
             </div>
           )}
         </TabsContent>

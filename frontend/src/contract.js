@@ -12,7 +12,7 @@ import { bytecode } from './bytecode.json';
 
 // 컨트랙트 주소 — localStorage에 저장/불러오기
 const STORAGE_KEY = 'promptnft_contract_address';
-const DEFAULT_ADDRESS = '0xCBd058e3018D1Bc007ebEE47fbB934FAa5441c27';
+const DEFAULT_ADDRESS = '0x45032A3D721ba749a77035898dfBE31815c4Dfbf';
 
 export function getContractAddress() {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_ADDRESS;
