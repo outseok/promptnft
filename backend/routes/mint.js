@@ -4,13 +4,14 @@
 const express = require("express");
 const router = express.Router();
 const { queries } = require("../utils/db");
+const { encrypt } = require("../utils/crypto");
 
 router.post("/mint", (req, res) => {
   try {
     const {
       token_id, title, description, prompt_encrypted,
       creator_address, price, category, image_url,
-      mint_mode, max_executions,
+      mint_mode, max_executions, is_for_sale,
     } = req.body;
 
     // lazy mint는 token_id 없이도 가능
@@ -41,11 +42,14 @@ router.post("/mint", (req, res) => {
       }
     }
 
+    // 프롬프트 암호화 (백엔드에서 일괄 처리)
+    const encryptedPrompt = encrypt(prompt_encrypted);
+
     const result = queries.insertNFT({
       token_id: finalTokenId,
       title: title.trim(),
       description: description || "",
-      prompt_encrypted,
+      prompt_encrypted: encryptedPrompt,
       creator_address: creator_address.toLowerCase(),
       owner_address: creator_address.toLowerCase(),
       price: price || "0",
@@ -54,7 +58,13 @@ router.post("/mint", (req, res) => {
       max_executions: max_executions || 50,
       mint_mode: isLazy ? "lazy" : "direct",
       is_minted: isLazy ? 0 : 1,
+      is_for_sale: is_for_sale !== undefined ? (is_for_sale ? 1 : 0) : (isLazy ? 1 : 0),
     });
+
+    // prompts 테이블에도 저장 (동기화)
+    const db = require("../utils/db");
+    db.prepare("INSERT OR REPLACE INTO prompts (token_id, encrypted_content) VALUES (?, ?)")
+      .run(String(finalTokenId), encryptedPrompt);
 
     console.log(`[민팅 저장] tokenId=${finalTokenId}, mode=${isLazy ? "lazy" : "direct"}, creator=${creator_address}`);
 
@@ -95,6 +105,14 @@ router.post("/buy", (req, res) => {
         Number(new_token_id),
         buyer_address.toLowerCase()
       );
+
+      // prompts 테이블도 동기화
+      const db = require("../utils/db");
+      const nftAfter = queries.getNFTByTokenId(Number(new_token_id));
+      if (nftAfter && nftAfter.prompt_encrypted) {
+        db.prepare("INSERT OR REPLACE INTO prompts (token_id, encrypted_content) VALUES (?, ?)")
+          .run(String(new_token_id), nftAfter.prompt_encrypted);
+      }
 
       queries.insertTransaction({
         token_id: Number(new_token_id),

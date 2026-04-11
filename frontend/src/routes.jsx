@@ -8,6 +8,7 @@ import { RegisterNFT } from './pages/RegisterNFT';
 import { Execute } from './pages/Execute';
 import { Admin } from './pages/Admin';
 import { TransactionHistory } from './pages/TransactionHistory';
+import { ResaleNFT } from './pages/ResaleNFT';
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
       { path: 'nft/:id', element: <NFTDetail /> },
       { path: 'my-nfts', element: <MyNFTs /> },
       { path: 'register', element: <RegisterNFT /> },
+      { path: 'resale/:id', element: <ResaleNFT /> },
       { path: 'execute', element: <Execute /> },
       { path: 'transactions', element: <TransactionHistory /> },
       { path: 'admin', element: <Admin /> },

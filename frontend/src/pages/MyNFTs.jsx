@@ -37,24 +37,40 @@ export function MyNFTs() {
   }
 
   async function handleToggleSale(nft, newPrice) {
+    const isLazyUnminted = nft.mint_mode === 'lazy' && (!nft.is_minted || nft.token_id < 0);
     try {
       if (nft.is_for_sale) {
-        toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
-        await onChainCancelListing(signer, nft.token_id);
-        await updateSaleStatus(nft.token_id, {
-          is_for_sale: false,
-          price: nft.price,
-        });
-        toast.success('판매 중지됨');
+        // ── 판매 중지 ──
+        if (isLazyUnminted) {
+          // Lazy unminted: DB만 변경
+          await updateSaleStatus(nft.token_id, { is_for_sale: false, price: nft.price });
+          toast.success('마켓에서 내림 처리되었습니다.');
+        } else {
+          // 온체인 민팅된 NFT: 온체인 + DB
+          toast.info('MetaMask에서 판매 취소 트랜잭션을 승인해주세요...');
+          await onChainCancelListing(signer, nft.token_id);
+          await updateSaleStatus(nft.token_id, { is_for_sale: false, price: nft.price });
+          toast.success('판매 중지됨');
+        }
       } else {
+        // ── 판매 등록 ──
+        if (nft.creator_address !== address?.toLowerCase()) {
+          // 구매한 NFT → 재판매 페이지로 이동
+          navigate(`/resale/${nft.token_id}`);
+          return;
+        }
         const price = newPrice || nft.price;
-        toast.info('MetaMask에서 판매 등록 트랜잭션을 승인해주세요...');
-        await onChainListForSale(signer, nft.token_id, String(price));
-        await updateSaleStatus(nft.token_id, {
-          is_for_sale: true,
-          price,
-        });
-        toast.success(`${price} ETH로 판매 등록됨`);
+        if (isLazyUnminted) {
+          // Lazy unminted: DB만 변경
+          await updateSaleStatus(nft.token_id, { is_for_sale: true, price });
+          toast.success('마켓에 등록되었습니다.');
+        } else {
+          // 온체인 민팅된 NFT: 온체인 + DB
+          toast.info('MetaMask에서 판매 등록 트랜잭션을 승인해주세요...');
+          await onChainListForSale(signer, nft.token_id, String(price));
+          await updateSaleStatus(nft.token_id, { is_for_sale: true, price });
+          toast.success(`${price} ETH로 판매 등록됨`);
+        }
       }
       refreshMyNFTs();
     } catch (err) {

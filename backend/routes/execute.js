@@ -78,9 +78,19 @@ router.post("/", async (req, res, next) => {
     }
 
     // ── STEP 3: 프롬프트 복호화 ──
-    const row = db
+    let row = db
       .prepare("SELECT encrypted_content FROM prompts WHERE token_id = ?")
       .get(String(tokenId));
+
+    // fallback: nfts 테이블에서 복구
+    if (!row) {
+      const nft = db.prepare("SELECT prompt_encrypted FROM nfts WHERE token_id = ?").get(String(tokenId));
+      if (nft && nft.prompt_encrypted) {
+        db.prepare("INSERT INTO prompts (token_id, encrypted_content) VALUES (?, ?)")
+          .run(String(tokenId), nft.prompt_encrypted);
+        row = { encrypted_content: nft.prompt_encrypted };
+      }
+    }
 
     if (!row) {
       return res.status(404).json({ error: "프롬프트 데이터가 없습니다" });

@@ -1,7 +1,7 @@
 // pages/RegisterNFT.jsx — NFT 등록 페이지 (민팅 시점 선택 + 승인 요청 흐름)
 import { useState } from 'react';
 import { useWallet } from '../context/WalletContext';
-import { encryptPrompt, mintNFT, screenPrompt } from '../api';
+import { mintNFT, screenPrompt } from '../api';
 import { onChainMint, onChainListForSale, getNextTokenId } from '../contract';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -90,7 +90,7 @@ export function RegisterNFT() {
         const mintRes = await mintNFT({
           title: formData.title,
           description: formData.description,
-          prompt_encrypted: '[encrypted]',
+          prompt_encrypted: formData.prompt,
           creator_address: address,
           price: formData.price,
           category: formData.category,
@@ -99,47 +99,42 @@ export function RegisterNFT() {
           max_executions: usageLimit,
         });
         finalTokenId = mintRes.data?.token_id ?? mintRes.token_id;
-
-        // 프롬프트 암호화
-        await encryptPrompt({
-          tokenId: finalTokenId,
-          promptContent: formData.prompt,
-          walletAddress: address,
-        });
       } else {
         // Direct mint: 즉시 온체인 민팅
+        // 1단계: 온체인 민팅 (MetaMask TX #1)
         toast.info('MetaMask에서 민팅 트랜잭션을 승인해주세요...');
         const { tokenId } = await onChainMint(signer, tokenURI, usageLimit);
         finalTokenId = tokenId ?? (await getNextTokenId(provider) - 1);
 
-        toast.info('온체인 민팅 완료! 백엔드 저장 중...');
+        // 2단계: 판매 등록 (MetaMask TX #2) — 민팅 성공 후에만 진행
+        let listedOnChain = false;
+        if (Number(formData.price) > 0) {
+          toast.info('MetaMask에서 판매 등록 트랜잭션을 승인해주세요...');
+          try {
+            await onChainListForSale(signer, finalTokenId, String(formData.price));
+            listedOnChain = true;
+          } catch {
+            // 판매 등록 실패 시 민팅은 됐지만 마켓에 올리지 않음
+            toast.warning('온체인 민팅은 완료되었으나 판매 등록을 취소했습니다. 마이페이지에서 판매 등록할 수 있습니다.', { duration: 6000 });
+          }
+        }
 
-        // 프롬프트 암호화
-        await encryptPrompt({
-          tokenId: finalTokenId,
-          promptContent: formData.prompt,
-          walletAddress: address,
-        });
+        toast.info('백엔드 저장 중...');
 
-        // 백엔드 저장
+        // 3단계: 백엔드 저장 (모든 온체인 TX 완료 후)
         await mintNFT({
           token_id: finalTokenId,
           title: formData.title,
           description: formData.description,
-          prompt_encrypted: '[encrypted]',
+          prompt_encrypted: formData.prompt,
           creator_address: address,
           price: formData.price,
           category: formData.category,
           image_url: thumbnail || null,
           mint_mode: 'direct',
           max_executions: usageLimit,
+          is_for_sale: listedOnChain ? 1 : 0,
         });
-
-        // 판매 등록
-        if (Number(formData.price) > 0) {
-          toast.info('판매 등록 중...');
-          await onChainListForSale(signer, finalTokenId, String(formData.price));
-        }
       }
 
       toast.success('NFT 등록 완료!', { duration: 5000 });

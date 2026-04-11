@@ -129,7 +129,7 @@ export function Admin() {
     setDbLoading(true);
     try {
       const res = await getDBTables();
-      setDbTables(res.tables || []);
+      setDbTables((res.tables || []).map(t => t.name || t));
     } catch (err) {
       toast.error('DB 로드 실패: ' + err.message);
     } finally {
@@ -470,7 +470,7 @@ export function Admin() {
                   <h3 className="font-semibold text-th-sub">
                     {selectedTable}
                     <span className="text-sm font-normal text-th-text-secondary ml-2">
-                      ({tableData.total || tableData.data?.length || 0}건)
+                      ({tableData.count || tableData.data?.length || 0}건)
                     </span>
                   </h3>
                 </div>

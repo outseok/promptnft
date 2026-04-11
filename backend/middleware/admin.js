@@ -6,6 +6,7 @@ const logger = require("../utils/logger");
 // 관리자 지갑 주소 목록 (소문자로 저장)
 const ADMIN_ADDRESSES = [
   "0x0ceb7a69b9b1894a335ee0539b48a6d9a6420c5c",
+  "0xd2f23998a8ad9f53afa170e9d17fd422705a9276",
 ];
 
 function isAdmin(walletAddress) {

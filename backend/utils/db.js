@@ -186,11 +186,12 @@ const queries = {
     runSql(
       `INSERT INTO nfts (token_id, title, description, prompt_encrypted,
                          creator_address, owner_address, price, category, image_url,
-                         max_executions, mint_mode, is_minted)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                         max_executions, mint_mode, is_minted, is_for_sale)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [data.token_id, data.title, data.description, data.prompt_encrypted,
        data.creator_address, data.owner_address, data.price, data.category, data.image_url,
-       data.max_executions || 50, data.mint_mode || 'direct', data.is_minted !== undefined ? data.is_minted : 1]
+       data.max_executions || 50, data.mint_mode || 'direct', data.is_minted !== undefined ? data.is_minted : 1,
+       data.is_for_sale !== undefined ? data.is_for_sale : 1]
     );
     return { lastInsertRowid: queryOne("SELECT last_insert_rowid() as id")?.id };
   },

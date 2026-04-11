@@ -6,8 +6,7 @@ import { onChainBuy, onChainLazyMintAndBuy } from '../contract';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { useWallet } from '../context/WalletContext';
-import { getContractAddress } from '../contract';
-import { ArrowLeft, CheckCircle2, Store, Zap, Tag, User, Sparkles, ChevronDown, ChevronUp, Copy } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Store, Zap, Tag, User, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function NFTDetail() {
@@ -16,7 +15,6 @@ export function NFTDetail() {
   const { isConnected, address, signer } = useWallet();
   const [nft, setNft] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [txOpen, setTxOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,86 +132,20 @@ export function NFTDetail() {
             )}
           </div>
 
-          {/* NFT Address / Contract Address */}
-          <div className="glass rounded-2xl p-6">
-            {nft.is_minted && nft.token_id >= 0 ? (
-              <>
-                <h3 className="text-th-sub font-semibold mb-3">NFT 주소</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-th-strong font-mono text-sm break-all">
-                      {getContractAddress()}#{nft.token_id}
-                    </span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${getContractAddress()}#${nft.token_id}`);
-                        toast.success('주소가 복사되었습니다');
-                      }}
-                      className="shrink-0 p-1.5 rounded-lg hover:bg-th-surface-hover text-th-text-secondary hover:text-th-sub transition-colors"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <a
-                    href={`https://sepolia.etherscan.io/nft/${getContractAddress()}/${nft.token_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-th-accent text-xs hover:underline"
-                  >
-                    Etherscan에서 보기 ↗
-                  </a>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 className="text-th-sub font-semibold mb-3">컨트랙트 주소</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-th-strong font-mono text-sm break-all">{getContractAddress()}</span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(getContractAddress());
-                      toast.success('주소가 복사되었습니다');
-                    }}
-                    className="shrink-0 p-1.5 rounded-lg hover:bg-th-surface-hover text-th-text-secondary hover:text-th-sub transition-colors"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-th-muted text-xs mt-2">구매 시 온체인 민팅이 진행됩니다</p>
-              </>
-            )}
-          </div>
-
-          {/* Transaction History (Expandable) */}
+          {/* Transaction History */}
           {nft.transaction_history && nft.transaction_history.length > 0 && (
-            <div className="glass rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setTxOpen(!txOpen)}
-                className="w-full flex items-center justify-between p-6 text-left hover:bg-th-surface-hover transition-colors"
-              >
-                <h3 className="text-th-sub font-semibold">거래 내역 ({nft.transaction_history.length})</h3>
-                {txOpen ? <ChevronUp className="w-5 h-5 text-th-text-secondary" /> : <ChevronDown className="w-5 h-5 text-th-text-secondary" />}
-              </button>
-              {txOpen && (
-                <div className="px-6 pb-6 space-y-3 border-t border-th-border pt-4">
-                  {nft.transaction_history.map((tx, i) => (
-                    <div key={i} className="space-y-1.5 text-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="text-th-text-secondary">
-                          {tx.from_address?.slice(0, 6)}...{tx.from_address?.slice(-4)} → {tx.to_address?.slice(0, 6)}...{tx.to_address?.slice(-4)}
-                        </div>
-                        <div className="text-th-accent font-medium">{tx.price} ETH</div>
-                      </div>
-                      {tx.tx_hash && (
-                        <div className="text-th-muted text-xs font-mono break-all">TX: {tx.tx_hash}</div>
-                      )}
-                      {tx.created_at && (
-                        <div className="text-th-muted text-xs">{new Date(tx.created_at).toLocaleString()}</div>
-                      )}
+            <div className="glass rounded-2xl p-6">
+              <h3 className="text-th-sub font-semibold mb-4">거래 내역</h3>
+              <div className="space-y-3">
+                {nft.transaction_history.map((tx, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="text-th-text-secondary">
+                      {tx.from_address?.slice(0, 6)}... → {tx.to_address?.slice(0, 6)}...
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="text-th-accent font-medium">{tx.price} ETH</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -248,8 +180,14 @@ export function NFTDetail() {
 
           <div className="border-t border-b border-th-border py-4 space-y-4">
             <div>
-              <div className="text-sm text-th-text-secondary mb-1">카테고리</div>
-              <div className="text-th-sub font-medium">{nft.category || '일반'}</div>
+              <div className="text-sm text-th-text-secondary mb-1">토큰 아이디</div>
+                {nft.mint_mode === 'lazy' && (!nft.token_id || nft.token_id < 0 || nft.token_id === '-1') ? (
+                  <div>
+                    <span className="inline-block px-2 py-1 rounded bg-th-surface-hover text-th-accent font-semibold text-xs mb-1">판매 완료 시 토큰아이디가 생성됩니다.</span>
+                  </div>
+                ) : (
+                  <div className="text-th-strong font-mono text-sm">#{nft.token_id}</div>
+                )}
             </div>
             <div>
               <div className="text-sm text-th-text-secondary mb-1">소유자</div>
@@ -295,6 +233,12 @@ export function NFTDetail() {
               >
                 {isConnected ? '구매하기' : '지갑을 먼저 연결하세요'}
               </Button>
+            ) : isOwner && nft.creator_address === address.toLowerCase() ? (
+              <div className="bg-th-accent-bg border border-th-accent-border rounded-xl p-4 text-center">
+                <Sparkles className="w-6 h-6 text-th-accent mx-auto mb-2" />
+                <p className="text-th-accent font-medium">내가 만든 NFT</p>
+                <p className="text-th-text-secondary text-sm mt-1">다른 사용자가 구매 후 실행할 수 있습니다</p>
+              </div>
             ) : isOwner ? (
               <div className="bg-th-success-bg border border-th-success-border rounded-xl p-4 text-center">
                 <CheckCircle2 className="w-6 h-6 text-th-success mx-auto mb-2" />
